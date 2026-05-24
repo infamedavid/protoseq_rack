@@ -71,12 +71,19 @@ struct GinaArp : Module {
 	}
 
 	void process(const ProcessArgs& args) override {
-		if (gateTrigger.process(inputs[GATE_INPUT].getVoltage())) {
+		const float gateVoltage = inputs[GATE_INPUT].getVoltage();
+		const float clockVoltage = inputs[CLOCK_INPUT].getVoltage();
+
+		const bool gateHigh = gateVoltage >= 1.0f;
+		const bool clockHigh = clockVoltage >= 1.0f;
+
+		const bool gateRising = gateTrigger.process(gateVoltage);
+		const bool clockRising = clockTrigger.process(clockVoltage);
+
+		if (gateRising) {
 			noteIndex = 0;
 		}
 
-		const bool gateHigh = inputs[GATE_INPUT].getVoltage() >= 1.0f;
-		const bool clockHigh = inputs[CLOCK_INPUT].getVoltage() >= 1.0f;
 		outputs[GATE_OUTPUT].setVoltage((gateHigh && clockHigh) ? 10.0f : 0.0f);
 
 		if (!gateHigh) {
@@ -84,7 +91,7 @@ struct GinaArp : Module {
 			return;
 		}
 
-		if (!clockTrigger.process(inputs[CLOCK_INPUT].getVoltage())) {
+		if (!clockRising) {
 			outputs[VOCT_OUTPUT].setVoltage(heldVolts);
 			return;
 		}
