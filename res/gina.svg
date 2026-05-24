@@ -38,7 +38,7 @@
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(-85.195831,-98.160416) scale(1.2,1)">
+     transform="matrix(1.2,0,0,1,-102.234997,-98.160416)">
     <rect
        style="fill:#e6e6e6;stroke:none;stroke-width:0.575"
        id="rect6"
