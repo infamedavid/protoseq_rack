@@ -14,14 +14,8 @@ using namespace protoseq;
 namespace {
 
 bool approx(float a, float b, float eps = 1e-6f) { return std::fabs(a - b) <= eps; }
-
-std::vector<int> midiForPitchClassInRange(int pitchClass, int lo, int hi) {
-    std::vector<int> out;
-    for (int m = lo; m <= hi; ++m) {
-        if ((m % 12 + 12) % 12 == pitchClass) out.push_back(m);
-    }
-    return out;
-}
+float clamp01(float v) { return std::max(0.0f, std::min(1.0f, v)); }
+float lerp(float a, float b, float t) { return a + (b - a) * t; }
 
 std::vector<GinaCandidate> tonalOnly(const std::vector<GinaCandidate>& in) {
     std::vector<GinaCandidate> out;
@@ -118,13 +112,30 @@ int main() {
     auto oddLow = core.generateCandidates(od1low);
     for (const auto& c : oddLow) assert(!c.oddity);
 
-    // Weight curve samples for C# and A#
-    auto pc1 = midiForPitchClassInRange(1, 84, 108); // C#
-    auto pc10 = midiForPitchClassInRange(10, 84, 108); // A#
     auto findOddWeight = [&](int midi)->float { for (auto& c: oddHi) if (c.oddity && c.midiNote==midi) return c.weight; return -1.f; };
     assert(findOddWeight(85) > 0.f && findOddWeight(97) > findOddWeight(85));
     assert(findOddWeight(94) > findOddWeight(85));
     assert(findOddWeight(106) > findOddWeight(94));
+
+    // Exact ODTS progressive-factor formula checks (C major oddity rank: C#, D#, F#, G#, A#)
+    const float cSharp6 = findOddWeight(85);   // C#6, rank 0
+    const float aSharp6 = findOddWeight(94);   // A#6, rank 4
+    const float cSharp7 = findOddWeight(97);   // C#7, rank 0
+    const float aSharp7 = findOddWeight(106);  // A#7, rank 4
+    assert(cSharp6 > 0.f && aSharp6 > 0.f && cSharp7 > 0.f && aSharp7 > 0.f);
+
+    const auto expectedOddWeight = [&](int midi, int oddityIndex, int oddityCount)->float {
+        const float registerProgress = clamp01((static_cast<float>(midi) - 84.0f) / 12.0f);
+        const float rankProgress = oddityCount > 1 ? static_cast<float>(oddityIndex) / static_cast<float>(oddityCount - 1) : 0.0f;
+        const float factorAtC6 = lerp(0.10f, 0.40f, rankProgress);
+        const float factorAtC7 = lerp(0.50f, 1.00f, rankProgress);
+        const float progressiveFactor = lerp(factorAtC6, factorAtC7, registerProgress);
+        return std::min(tonalCeil, tonalCeil * progressiveFactor); // ODTS=1.0 here
+    };
+    assert(approx(cSharp6, expectedOddWeight(85, 0, 5), 1e-4f));
+    assert(approx(aSharp6, expectedOddWeight(94, 4, 5), 1e-4f));
+    assert(approx(cSharp7, expectedOddWeight(97, 0, 5), 1e-4f));
+    assert(approx(aSharp7, expectedOddWeight(106, 4, 5), 1e-4f));
 
     // ODTS must not change tonal weights
     GinaArpContext tonalA{0, Mode::Major, 84, 0.4f, 0.0f, 4, 0.2f, 1};
