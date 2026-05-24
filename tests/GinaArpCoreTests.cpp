@@ -1,0 +1,170 @@
+#include "../src/GinaArpCore.hpp"
+#include "../src/GinaArpScales.hpp"
+
+#include <algorithm>
+#include <cassert>
+#include <cmath>
+#include <iostream>
+#include <map>
+#include <set>
+#include <vector>
+
+using namespace protoseq;
+
+namespace {
+
+bool approx(float a, float b, float eps = 1e-6f) { return std::fabs(a - b) <= eps; }
+
+std::vector<int> midiForPitchClassInRange(int pitchClass, int lo, int hi) {
+    std::vector<int> out;
+    for (int m = lo; m <= hi; ++m) {
+        if ((m % 12 + 12) % 12 == pitchClass) out.push_back(m);
+    }
+    return out;
+}
+
+std::vector<GinaCandidate> tonalOnly(const std::vector<GinaCandidate>& in) {
+    std::vector<GinaCandidate> out;
+    for (const auto& c : in) if (!c.oddity) out.push_back(c);
+    return out;
+}
+
+}
+
+int main() {
+    GinaArpCore core;
+
+    // 1) Scale interval tests
+    const std::map<Mode, std::vector<int>> expected = {
+        {Mode::Major, {0,2,4,5,7,9,11}}, {Mode::Minor, {0,2,3,5,7,8,10}},
+        {Mode::HarmonicMinor, {0,2,3,5,7,8,11}}, {Mode::MelodicMinor, {0,2,3,5,7,9,11}},
+        {Mode::Dorian, {0,2,3,5,7,9,10}}, {Mode::Phrygian, {0,1,3,5,7,8,10}},
+        {Mode::Lydian, {0,2,4,6,7,9,11}}, {Mode::Mixolydian, {0,2,4,5,7,9,10}},
+        {Mode::Locrian, {0,1,3,5,6,8,10}}, {Mode::MajorPentatonic, {0,2,4,7,9}},
+        {Mode::MinorPentatonic, {0,3,5,7,10}}, {Mode::Blues, {0,3,5,6,7,10}},
+        {Mode::WholeTone, {0,2,4,6,8,10}}, {Mode::DiminishedHalfWhole, {0,1,3,4,6,7,9,10}},
+        {Mode::DiminishedWholeHalf, {0,2,3,5,6,8,9,11}}, {Mode::HungarianMinor, {0,2,3,6,7,8,11}},
+        {Mode::PhrygianDominant, {0,1,4,5,7,8,10}}, {Mode::JapaneseIn, {0,1,5,7,10}},
+        {Mode::Hirojoshi, {0,2,3,7,8}}
+    };
+    for (const auto& [mode, ivals] : expected) assert(scaleIntervals(mode) == ivals);
+    assert(expected.count(Mode::Minor) == 1);
+
+    // 2) V/OCT conversions
+    assert(voltageToNearestMidi(0.0f) == 60);
+    assert(voltageToNearestMidi(1.0f) == 72);
+    assert(voltageToNearestMidi(-1.0f) == 48);
+    assert(approx(midiToVoltage(60), 0.0f));
+    assert(approx(midiToVoltage(72), 1.0f));
+    assert(approx(midiToVoltage(48), -1.0f));
+    assert(approx(midiToVoltage(61) - midiToVoltage(60), 1.0f/12.0f));
+
+    // 3) QNT pivot tests KEY C MODE Major
+    assert(core.resolvePivotMidi(midiToVoltage(61), 0, Mode::Major, PivotInputMode::Quantized) == 60);
+    assert(core.resolvePivotMidi(midiToVoltage(63), 0, Mode::Major, PivotInputMode::Quantized) == 62);
+    assert(core.resolvePivotMidi(midiToVoltage(66), 0, Mode::Major, PivotInputMode::Quantized) == 65);
+    assert(core.resolvePivotMidi(midiToVoltage(68), 0, Mode::Major, PivotInputMode::Quantized) == 67);
+    assert(core.resolvePivotMidi(midiToVoltage(70), 0, Mode::Major, PivotInputMode::Quantized) == 69);
+
+    // 4) RAW pivot tests
+    assert(core.resolvePivotMidi(midiToVoltage(61), 0, Mode::Major, PivotInputMode::Raw) == 61);
+    GinaArpContext rawCtx{0, Mode::Major, 61, 0.3f, 0.0f, 4, 0.4f, 1};
+    for (const auto& c : core.generateCandidates(rawCtx)) {
+        if (!c.oddity) assert(pitchClassInMode(0, Mode::Major, c.midiNote));
+    }
+
+    // 5) RANGE mapping and clamp
+    GinaArpContext r0{0, Mode::Major, 60, 0.0f, 0.0f, 4, 0.2f, 1};
+    auto c0 = core.generateCandidates(r0);
+    for (const auto& c : tonalOnly(c0)) assert(c.midiNote >= 60 && c.midiNote <= 60);
+    GinaArpContext r05{0, Mode::Major, 60, 0.5f, 0.0f, 4, 0.2f, 1};
+    auto c05 = core.generateCandidates(r05);
+    for (const auto& c : tonalOnly(c05)) assert(c.midiNote >= 36 && c.midiNote <= 84);
+    GinaArpContext r1{0, Mode::Major, 60, 1.0f, 0.0f, 4, 0.2f, 1};
+    auto c1 = core.generateCandidates(r1);
+    for (const auto& c : tonalOnly(c1)) assert(c.midiNote >= 12 && c.midiNote <= 108);
+    GinaArpContext rClamp{0, Mode::Major, 60, 5.0f, 0.0f, 4, 0.2f, 1};
+    auto cc = core.generateCandidates(rClamp);
+    for (const auto& c : tonalOnly(cc)) assert(c.midiNote >= 12 && c.midiNote <= 108);
+
+    // 6) ARP LEN
+    assert(shouldForcePivot(0, 4));
+    assert(!shouldForcePivot(1, 4));
+    assert(shouldForcePivot(4, 4));
+    assert(shouldForcePivot(8, 4));
+    assert(shouldForcePivot(12, 4));
+    assert(shouldForcePivot(1, 1));
+
+    // 7) ODTS
+    GinaArpContext od0{0, Mode::Major, 84, 0.4f, 0.0f, 4, 0.2f, 1};
+    auto noOdd = core.generateCandidates(od0);
+    for (const auto& c : noOdd) assert(!c.oddity);
+
+    GinaArpContext od1hi{0, Mode::Major, 96, 0.5f, 1.0f, 4, 0.2f, 1};
+    auto oddHi = core.generateCandidates(od1hi);
+    bool hasOdd = false;
+    float tonalCeil = 0.f;
+    for (const auto& c : oddHi) {
+        if (!c.oddity) tonalCeil = std::max(tonalCeil, c.weight);
+        if (c.oddity) {
+            hasOdd = true;
+            assert(c.midiNote >= 84);
+            assert(c.weight <= tonalCeil + 1e-5f);
+        }
+    }
+    assert(hasOdd);
+
+    GinaArpContext od1low{0, Mode::Major, 72, 0.2f, 1.0f, 4, 0.2f, 1};
+    auto oddLow = core.generateCandidates(od1low);
+    for (const auto& c : oddLow) assert(!c.oddity);
+
+    // Weight curve samples for C# and A#
+    auto pc1 = midiForPitchClassInRange(1, 84, 108); // C#
+    auto pc10 = midiForPitchClassInRange(10, 84, 108); // A#
+    auto findOddWeight = [&](int midi)->float { for (auto& c: oddHi) if (c.oddity && c.midiNote==midi) return c.weight; return -1.f; };
+    assert(findOddWeight(85) > 0.f && findOddWeight(97) > findOddWeight(85));
+    assert(findOddWeight(94) > findOddWeight(85));
+    assert(findOddWeight(106) > findOddWeight(94));
+
+    // ODTS must not change tonal weights
+    GinaArpContext tonalA{0, Mode::Major, 84, 0.4f, 0.0f, 4, 0.2f, 1};
+    GinaArpContext tonalB{0, Mode::Major, 84, 0.4f, 1.0f, 4, 0.2f, 1};
+    auto ta = tonalOnly(core.generateCandidates(tonalA));
+    auto tb = tonalOnly(core.generateCandidates(tonalB));
+    assert(ta.size() == tb.size());
+    for (size_t i=0;i<ta.size();++i) { assert(ta[i].midiNote == tb[i].midiNote); assert(approx(ta[i].weight, tb[i].weight)); }
+
+    // 8) Pentatonic ODTS
+    GinaArpContext pent{0, Mode::MajorPentatonic, 96, 0.5f, 1.0f, 4, 0.2f, 1};
+    auto pentC = core.generateCandidates(pent);
+    std::set<int> oddPC;
+    for (auto& c : pentC) if (c.oddity) oddPC.insert((c.midiNote%12+12)%12);
+    for (int pc : std::vector<int>{1,3,5,6,8,10,11}) assert(oddPC.count(pc) > 0);
+
+    // 9) Locrian strictness
+    GinaArpContext loc{0, Mode::Locrian, 60, 0.8f, 0.0f, 4, 0.2f, 1};
+    auto locC = core.generateCandidates(loc);
+    bool hasPerfect5 = false, hasFlat5 = false;
+    for (auto& c : locC) if (!c.oddity) { if (c.intervalClass==7) hasPerfect5=true; if (c.intervalClass==6) hasFlat5=true; }
+    assert(!hasPerfect5);
+    assert(hasFlat5);
+
+    // 10) Seed tests
+    GinaArpContext sd{0, Mode::Major, 72, 0.4f, 0.0f, 4, 0.75f, 3};
+    int n1 = core.generateMidiNote(sd);
+    int n2 = core.generateMidiNote(sd);
+    assert(n1 == n2);
+    GinaArpContext sd2 = sd; sd2.seedControl = 0.76f;
+    int n3 = core.generateMidiNote(sd2);
+    bool eventuallyDifferent = (n3 != n1);
+    if (!eventuallyDifferent) { sd2.noteIndex = 4; eventuallyDifferent = (core.generateMidiNote(sd2) != n1); }
+    assert(eventuallyDifferent);
+
+    // 11) fallback
+    GinaArpContext fb{0, Mode::Major, 1, 0.0f, 0.0f, 4, 0.2f, 1};
+    auto fbc = core.generateCandidates(fb);
+    assert(!fbc.empty());
+
+    std::cout << "All GinaArp core tests passed\n";
+    return 0;
+}
