@@ -58,38 +58,52 @@ bool isIntervalAllowedInZone(
         return false;
     }
 
+    if (zone == RegisterZone::Zone5 || zone == RegisterZone::Zone6) {
+        return true;
+    }
+
+    std::set<int> allowed;
+    allowed.insert(0);
+
     const auto has = [&allowedScaleIntervalsRelativeToPivot](int interval) {
         return allowedScaleIntervalsRelativeToPivot.find(interval) != allowedScaleIntervalsRelativeToPivot.end();
     };
 
-    switch (zone) {
-        case RegisterZone::Zone0:
-            return intervalClass == 0;
-        case RegisterZone::Zone1:
-            if (intervalClass == 0) return true;
-            if (has(7)) return intervalClass == 7;
-            if (has(6)) return intervalClass == 6;
-            return false;
-        case RegisterZone::Zone2:
-            if (intervalClass == 0) return true;
-            if (has(7) && intervalClass == 7) return true;
-            if (!has(7) && has(6) && intervalClass == 6) return true;
-            if (has(3)) return intervalClass == 3;
-            if (has(4)) return intervalClass == 4;
-            return false;
-        case RegisterZone::Zone3:
-            return intervalClass == 0 || intervalClass == 7 || intervalClass == 6 || intervalClass == 3 || intervalClass == 4 ||
-                   intervalClass == 8 || intervalClass == 9 || intervalClass == 10 || intervalClass == 11;
-        case RegisterZone::Zone4:
-            return intervalClass == 0 || intervalClass == 7 || intervalClass == 6 || intervalClass == 3 || intervalClass == 4 ||
-                   intervalClass == 8 || intervalClass == 9 || intervalClass == 10 || intervalClass == 11 ||
-                   intervalClass == 1 || intervalClass == 2 || intervalClass == 5 || intervalClass == 6;
-        case RegisterZone::Zone5:
-        case RegisterZone::Zone6:
-            return true;
+    if (zone >= RegisterZone::Zone1) {
+        if (has(7)) {
+            allowed.insert(7);
+        } else if (has(6)) {
+            allowed.insert(6);
+        }
     }
-    return true;
+
+    if (zone >= RegisterZone::Zone2) {
+        if (has(3)) {
+            allowed.insert(3);
+        } else if (has(4)) {
+            allowed.insert(4);
+        }
+    }
+
+    if (zone >= RegisterZone::Zone3) {
+        for (int interval : {8, 9, 10, 11}) {
+            if (has(interval)) {
+                allowed.insert(interval);
+            }
+        }
+    }
+
+    if (zone >= RegisterZone::Zone4) {
+        for (int interval : {1, 2, 5, 6}) {
+            if (has(interval)) {
+                allowed.insert(interval);
+            }
+        }
+    }
+
+    return allowed.find(intervalClass) != allowed.end();
 }
+
 
 float baseTonalWeight(int intervalClass) {
     if (intervalClass == 0) return 10.0f;
