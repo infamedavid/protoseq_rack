@@ -1,0 +1,21 @@
+{
+  "slug": "Protoseq",
+  "name": "Protoseq",
+  "version": "0.1.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Protoseq",
+  "author": "InfameDavid",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/infamedavid/protoseq_rack",
+  "donateUrl": "",
+  "modules": [
+    {
+      "slug": "GinasARP",
+      "name": "Gina’s ARP",
+      "description": "Prototype arpeggiator module skeleton",
+      "tags": ["Sequencer"]
+    }
+  ]
+}
