@@ -281,6 +281,7 @@ struct GinaArpImageDisplay : TransparentWidget {
 struct GinaArpWidget : ModuleWidget {
 	GinaArpWidget(GinaArp* module) {
 		setModule(module);
+		box.size = Vec(RACK_GRID_WIDTH * 10, RACK_GRID_HEIGHT);
 		const std::string panelAsset = system::exists(asset::plugin(pluginInstance, "res/gina.svg"))
 			? "res/gina.svg"
 			: "res/GinaArp.svg";
