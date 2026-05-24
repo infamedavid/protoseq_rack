@@ -1,5 +1,6 @@
 #include "plugin.hpp"
 #include "GinaArpCore.hpp"
+#include <limits>
 
 using namespace protoseq;
 
@@ -178,9 +179,12 @@ struct GinaArp : Module {
 
 struct GinaArpImageDisplay : TransparentWidget {
 	std::vector<std::shared_ptr<Svg>> frames;
-	std::string fallbackAsset;
+	std::shared_ptr<Svg> fallbackFrame;
 	SvgWidget* svgWidget = nullptr;
 	std::function<int()> getIndex;
+	int lastIndex = std::numeric_limits<int>::min();
+	bool lastUsedFallback = false;
+	bool hasLastDisplayState = false;
 
 	GinaArpImageDisplay() {
 		svgWidget = new SvgWidget();
@@ -190,9 +194,19 @@ struct GinaArpImageDisplay : TransparentWidget {
 	void step() override {
 		TransparentWidget::step();
 		int idx = getIndex ? getIndex() : 0;
-		if (idx < 0 || idx >= static_cast<int>(frames.size()) || !frames[idx]) {
-			if (!fallbackAsset.empty()) {
-				svgWidget->setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, fallbackAsset)));
+		const bool useFallback = (idx < 0 || idx >= static_cast<int>(frames.size()) || !frames[idx]);
+
+		if (hasLastDisplayState && lastIndex == idx && lastUsedFallback == useFallback) {
+			return;
+		}
+
+		lastIndex = idx;
+		lastUsedFallback = useFallback;
+		hasLastDisplayState = true;
+
+		if (useFallback) {
+			if (fallbackFrame) {
+				svgWidget->setSvg(fallbackFrame);
 			}
 			return;
 		}
@@ -220,7 +234,7 @@ struct GinaArpWidget : ModuleWidget {
 		auto keyDisplay = new GinaArpImageDisplay();
 		keyDisplay->box.pos = mm2px(Vec(3.0, 8.0));
 		keyDisplay->box.size = mm2px(Vec(10.0, 6.0));
-		keyDisplay->fallbackAsset = "res/keymode_fallback.svg";
+		keyDisplay->fallbackFrame = APP->window->loadSvg(asset::plugin(pluginInstance, "res/keymode_fallback.svg"));
 		const std::vector<std::string> keyAssets{
 			"res/c.svg", "res/c1.svg", "res/d.svg", "res/d1.svg", "res/e.svg", "res/f.svg",
 			"res/f1.svg", "res/g.svg", "res/g1.svg", "res/a.svg", "res/a1.svg", "res/b.svg"
@@ -239,7 +253,7 @@ struct GinaArpWidget : ModuleWidget {
 		auto modeDisplay = new GinaArpImageDisplay();
 		modeDisplay->box.pos = mm2px(Vec(14.0, 8.0));
 		modeDisplay->box.size = mm2px(Vec(13.0, 6.0));
-		modeDisplay->fallbackAsset = "res/keymode_fallback.svg";
+		modeDisplay->fallbackFrame = APP->window->loadSvg(asset::plugin(pluginInstance, "res/keymode_fallback.svg"));
 		const std::vector<std::string> modeAssets{
 			"res/major.svg", "res/minor.svg", "res/harmonicminor.svg", "res/melodicminor.svg", "res/dorian.svg",
 			"res/phrygian.svg", "res/lydian.svg", "res/mixolydian.svg", "res/locrian.svg", "res/majorpentatonic.svg",
