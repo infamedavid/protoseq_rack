@@ -281,26 +281,26 @@ struct GinaArpImageDisplay : TransparentWidget {
 struct GinaArpWidget : ModuleWidget {
 	GinaArpWidget(GinaArp* module) {
 		setModule(module);
-		box.size = Vec(RACK_GRID_WIDTH * 12, RACK_GRID_HEIGHT);
+		box.size = Vec(RACK_GRID_WIDTH * 13, RACK_GRID_HEIGHT);
 		const std::string panelAsset = system::exists(asset::plugin(pluginInstance, "res/gina.svg"))
 			? "res/gina.svg"
 			: "res/GinaArp.svg";
 		setPanel(createPanel(asset::plugin(pluginInstance, panelAsset)));
 
-			addParam(createParamCentered<GinaLargeKnob>(mm2px(Vec(28.8, 18.9)), module, GinaArp::RANGE_PARAM));
-			addParam(createParamCentered<GinaSmallKnob>(mm2px(Vec(28.8, 54.3)), module, GinaArp::RANGE_ATTEN_PARAM));
-			addParam(createParamCentered<GinaLargeKnob>(mm2px(Vec(7.92, 35.6)), module, GinaArp::SEED_PARAM));
-			addParam(createParamCentered<GinaLargeKnob>(mm2px(Vec(18.36, 43.9)), module, GinaArp::ODTS_PARAM));
-			addParam(createParamCentered<GinaSmallKnob>(mm2px(Vec(18.36, 54.2)), module, GinaArp::ODTS_ATTEN_PARAM));
-			addParam(createParamCentered<GinaLargeKnob>(mm2px(Vec(39.24, 27.3)), module, GinaArp::ARP_LEN_PARAM));
-			addParam(createParamCentered<GinaMomentaryButton>(mm2px(Vec(17.52, 72.7)), module, GinaArp::KEY_PREV_PARAM));
-			addParam(createParamCentered<GinaMomentaryButton>(mm2px(Vec(23.52, 72.7)), module, GinaArp::KEY_NEXT_PARAM));
-			addParam(createParamCentered<GinaMomentaryButton>(mm2px(Vec(29.4, 72.7)), module, GinaArp::MODE_PREV_PARAM));
-			addParam(createParamCentered<GinaMomentaryButton>(mm2px(Vec(35.52, 72.7)), module, GinaArp::MODE_NEXT_PARAM));
-			addParam(createParamCentered<GinaPivotSwitch>(mm2px(Vec(7.92, 74.8)), module, GinaArp::PIVOT_MODE_PARAM));
+			addParam(createParamCentered<GinaLargeKnob>(mm2px(Vec(31.2, 18.9)), module, GinaArp::RANGE_PARAM));
+			addParam(createParamCentered<GinaSmallKnob>(mm2px(Vec(31.2, 54.3)), module, GinaArp::RANGE_ATTEN_PARAM));
+			addParam(createParamCentered<GinaLargeKnob>(mm2px(Vec(8.58, 35.6)), module, GinaArp::SEED_PARAM));
+			addParam(createParamCentered<GinaLargeKnob>(mm2px(Vec(19.89, 43.9)), module, GinaArp::ODTS_PARAM));
+			addParam(createParamCentered<GinaSmallKnob>(mm2px(Vec(19.89, 54.2)), module, GinaArp::ODTS_ATTEN_PARAM));
+			addParam(createParamCentered<GinaLargeKnob>(mm2px(Vec(42.51, 27.3)), module, GinaArp::ARP_LEN_PARAM));
+			addParam(createParamCentered<GinaMomentaryButton>(mm2px(Vec(18.98, 72.7)), module, GinaArp::KEY_PREV_PARAM));
+			addParam(createParamCentered<GinaMomentaryButton>(mm2px(Vec(25.48, 72.7)), module, GinaArp::KEY_NEXT_PARAM));
+			addParam(createParamCentered<GinaMomentaryButton>(mm2px(Vec(31.85, 72.7)), module, GinaArp::MODE_PREV_PARAM));
+			addParam(createParamCentered<GinaMomentaryButton>(mm2px(Vec(38.48, 72.7)), module, GinaArp::MODE_NEXT_PARAM));
+			addParam(createParamCentered<GinaPivotSwitch>(mm2px(Vec(8.58, 74.8)), module, GinaArp::PIVOT_MODE_PARAM));
 
 		auto keyDisplay = new GinaArpImageDisplay();
-			keyDisplay->box.pos = mm2px(Vec(18.0, 75.7));
+			keyDisplay->box.pos = mm2px(Vec(19.5, 75.7));
 		keyDisplay->box.size = mm2px(Vec(10.0, 6.0));
 		keyDisplay->fallbackFrame = loadOptionalSvg<GinaArpImageDisplay>("res/c.svg");
 		const std::vector<std::string> keyAssets{
@@ -319,7 +319,7 @@ struct GinaArpWidget : ModuleWidget {
 		addChild(keyDisplay);
 
 		auto modeDisplay = new GinaArpImageDisplay();
-			modeDisplay->box.pos = mm2px(Vec(26.4, 75.7));
+			modeDisplay->box.pos = mm2px(Vec(28.6, 75.7));
 		modeDisplay->box.size = mm2px(Vec(13.0, 6.0));
 		modeDisplay->fallbackFrame = loadOptionalSvg<GinaArpImageDisplay>("res/major.svg");
 		const std::vector<std::string> modeAssets{
@@ -340,15 +340,15 @@ struct GinaArpWidget : ModuleWidget {
 		};
 		addChild(modeDisplay);
 
-			addInput(createInputCentered<GinaJack>(mm2px(Vec(7.92, 62.8)), module, GinaArp::CLOCK_INPUT));
-			addInput(createInputCentered<GinaJack>(mm2px(Vec(18.36, 62.8)), module, GinaArp::RANGE_CV_INPUT));
-			addInput(createInputCentered<GinaJack>(mm2px(Vec(28.8, 62.8)), module, GinaArp::ODTS_CV_INPUT));
-			addInput(createInputCentered<GinaJack>(mm2px(Vec(39.24, 62.8)), module, GinaArp::SEED_CV_INPUT));
-			addInput(createInputCentered<GinaJack>(mm2px(Vec(7.92, 87.7)), module, GinaArp::VOCT_INPUT));
-			addInput(createInputCentered<GinaJack>(mm2px(Vec(18.36, 87.7)), module, GinaArp::GATE_INPUT));
+			addInput(createInputCentered<GinaJack>(mm2px(Vec(8.58, 62.8)), module, GinaArp::CLOCK_INPUT));
+			addInput(createInputCentered<GinaJack>(mm2px(Vec(19.89, 62.8)), module, GinaArp::RANGE_CV_INPUT));
+			addInput(createInputCentered<GinaJack>(mm2px(Vec(31.2, 62.8)), module, GinaArp::ODTS_CV_INPUT));
+			addInput(createInputCentered<GinaJack>(mm2px(Vec(42.51, 62.8)), module, GinaArp::SEED_CV_INPUT));
+			addInput(createInputCentered<GinaJack>(mm2px(Vec(8.58, 87.7)), module, GinaArp::VOCT_INPUT));
+			addInput(createInputCentered<GinaJack>(mm2px(Vec(19.89, 87.7)), module, GinaArp::GATE_INPUT));
 
-			addOutput(createOutputCentered<GinaJack>(mm2px(Vec(28.8, 87.7)), module, GinaArp::VOCT_OUTPUT));
-			addOutput(createOutputCentered<GinaJack>(mm2px(Vec(39.24, 87.7)), module, GinaArp::GATE_OUTPUT));
+			addOutput(createOutputCentered<GinaJack>(mm2px(Vec(31.2, 87.7)), module, GinaArp::VOCT_OUTPUT));
+			addOutput(createOutputCentered<GinaJack>(mm2px(Vec(42.51, 87.7)), module, GinaArp::GATE_OUTPUT));
 	}
 };
 
