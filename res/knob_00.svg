@@ -60,17 +60,5 @@
        y="145.48318"
        rx="0.25158283"
        ry="0.25158283" />
-    <circle
-       style="fill:#2d2d2d;fill-opacity:1;stroke-width:0.458668"
-       id="path1"
-       cx="114.0176"
-       cy="148.77077"
-       r="4.1963105" />
-    <circle
-       style="fill:#2d2d2d;fill-opacity:1;stroke-width:0.458668"
-       id="circle1"
-       cx="114.0176"
-       cy="148.77077"
-       r="4.1963105" />
   </g>
 </svg>
