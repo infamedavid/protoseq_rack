@@ -39,10 +39,15 @@ struct GinaArp : Module {
 	GinaArpCore core;
 	dsp::SchmittTrigger gateTrigger;
 	dsp::SchmittTrigger clockTrigger;
+	dsp::SchmittTrigger keyPrevTrigger;
+	dsp::SchmittTrigger keyNextTrigger;
+	dsp::SchmittTrigger modePrevTrigger;
+	dsp::SchmittTrigger modeNextTrigger;
 	int keyRootSemitone = 0;
 	Mode mode = Mode::Major;
 	int noteIndex = 0;
 	float heldVolts = 0.0f;
+	bool lastGateHigh = false;
 
 	GinaArp() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -57,7 +62,7 @@ struct GinaArp : Module {
 		configButton(KEY_NEXT_PARAM, "Key next");
 		configButton(MODE_PREV_PARAM, "Mode previous");
 		configButton(MODE_NEXT_PARAM, "Mode next");
-		configSwitch(PIVOT_MODE_PARAM, 0.f, 1.f, 0.f, "Pivot input mode", {"Quantized", "Raw"});
+		configSwitch(PIVOT_MODE_PARAM, 0.f, 1.f, 0.f, "Pivot input mode", {"QNT", "RAW"});
 
 		configInput(CLOCK_INPUT, "Clock");
 		configInput(GATE_INPUT, "Gate");
@@ -71,6 +76,22 @@ struct GinaArp : Module {
 	}
 
 	void process(const ProcessArgs& args) override {
+		if (keyPrevTrigger.process(params[KEY_PREV_PARAM].getValue())) {
+			keyRootSemitone = (keyRootSemitone + 11) % 12;
+		}
+		if (keyNextTrigger.process(params[KEY_NEXT_PARAM].getValue())) {
+			keyRootSemitone = (keyRootSemitone + 1) % 12;
+		}
+		constexpr int modeCount = static_cast<int>(Mode::Hirojoshi) + 1;
+		if (modePrevTrigger.process(params[MODE_PREV_PARAM].getValue())) {
+			const int current = static_cast<int>(mode);
+			mode = static_cast<Mode>((current + modeCount - 1) % modeCount);
+		}
+		if (modeNextTrigger.process(params[MODE_NEXT_PARAM].getValue())) {
+			const int current = static_cast<int>(mode);
+			mode = static_cast<Mode>((current + 1) % modeCount);
+		}
+
 		const float gateVoltage = inputs[GATE_INPUT].getVoltage();
 		const float clockVoltage = inputs[CLOCK_INPUT].getVoltage();
 
@@ -78,13 +99,19 @@ struct GinaArp : Module {
 		const bool clockHigh = clockVoltage >= 1.0f;
 
 		const bool gateRising = gateTrigger.process(gateVoltage);
+		const bool gateFalling = lastGateHigh && !gateHigh;
 		const bool clockRising = clockTrigger.process(clockVoltage);
+		lastGateHigh = gateHigh;
 
 		if (gateRising) {
 			noteIndex = 0;
 		}
 
-		outputs[GATE_OUTPUT].setVoltage((gateHigh && clockHigh) ? 10.0f : 0.0f);
+		if (gateFalling) {
+			outputs[GATE_OUTPUT].setVoltage(0.0f);
+		} else {
+			outputs[GATE_OUTPUT].setVoltage((gateHigh && clockHigh) ? 10.0f : 0.0f);
+		}
 
 		if (!gateHigh) {
 			outputs[VOCT_OUTPUT].setVoltage(heldVolts);
@@ -125,6 +152,52 @@ struct GinaArp : Module {
 		outputs[VOCT_OUTPUT].setVoltage(heldVolts);
 		++noteIndex;
 	}
+
+	json_t* dataToJson() override {
+		json_t* rootJ = json_object();
+		json_object_set_new(rootJ, "keyRootSemitone", json_integer(keyRootSemitone));
+		json_object_set_new(rootJ, "mode", json_integer(static_cast<int>(mode)));
+		return rootJ;
+	}
+
+	void dataFromJson(json_t* rootJ) override {
+		json_t* keyJ = json_object_get(rootJ, "keyRootSemitone");
+		if (keyJ) {
+			keyRootSemitone = static_cast<int>(json_integer_value(keyJ));
+			keyRootSemitone = (keyRootSemitone % 12 + 12) % 12;
+		}
+		json_t* modeJ = json_object_get(rootJ, "mode");
+		if (modeJ) {
+			const int rawMode = static_cast<int>(json_integer_value(modeJ));
+			const int modeCount = static_cast<int>(Mode::Hirojoshi) + 1;
+			const int clamped = std::clamp(rawMode, 0, modeCount - 1);
+			mode = static_cast<Mode>(clamped);
+		}
+	}
+};
+
+struct GinaArpImageDisplay : TransparentWidget {
+	std::vector<std::shared_ptr<Svg>> frames;
+	std::string fallbackAsset;
+	SvgWidget* svgWidget = nullptr;
+	std::function<int()> getIndex;
+
+	GinaArpImageDisplay() {
+		svgWidget = new SvgWidget();
+		addChild(svgWidget);
+	}
+
+	void step() override {
+		TransparentWidget::step();
+		int idx = getIndex ? getIndex() : 0;
+		if (idx < 0 || idx >= static_cast<int>(frames.size()) || !frames[idx]) {
+			if (!fallbackAsset.empty()) {
+				svgWidget->setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, fallbackAsset)));
+			}
+			return;
+		}
+		svgWidget->setSvg(frames[idx]);
+	}
 };
 
 struct GinaArpWidget : ModuleWidget {
@@ -143,6 +216,47 @@ struct GinaArpWidget : ModuleWidget {
 		addParam(createParamCentered<LEDButton>(mm2px(Vec(18.0, 76.0)), module, GinaArp::MODE_PREV_PARAM));
 		addParam(createParamCentered<LEDButton>(mm2px(Vec(24.0, 76.0)), module, GinaArp::MODE_NEXT_PARAM));
 		addParam(createParamCentered<CKSS>(mm2px(Vec(15.0, 86.0)), module, GinaArp::PIVOT_MODE_PARAM));
+
+		auto keyDisplay = new GinaArpImageDisplay();
+		keyDisplay->box.pos = mm2px(Vec(3.0, 8.0));
+		keyDisplay->box.size = mm2px(Vec(10.0, 6.0));
+		keyDisplay->fallbackAsset = "res/keymode_fallback.svg";
+		const std::vector<std::string> keyAssets{
+			"res/c.svg", "res/c1.svg", "res/d.svg", "res/d1.svg", "res/e.svg", "res/f.svg",
+			"res/f1.svg", "res/g.svg", "res/g1.svg", "res/a.svg", "res/a1.svg", "res/b.svg"
+		};
+		keyDisplay->frames.reserve(keyAssets.size());
+		for (const auto& assetPath : keyAssets) {
+			if (system::exists(asset::plugin(pluginInstance, assetPath))) keyDisplay->frames.push_back(APP->window->loadSvg(asset::plugin(pluginInstance, assetPath)));
+			else keyDisplay->frames.push_back(nullptr);
+		}
+		keyDisplay->getIndex = [module]() {
+			if (!module) return 0;
+			return module->keyRootSemitone;
+		};
+		addChild(keyDisplay);
+
+		auto modeDisplay = new GinaArpImageDisplay();
+		modeDisplay->box.pos = mm2px(Vec(14.0, 8.0));
+		modeDisplay->box.size = mm2px(Vec(13.0, 6.0));
+		modeDisplay->fallbackAsset = "res/keymode_fallback.svg";
+		const std::vector<std::string> modeAssets{
+			"res/major.svg", "res/minor.svg", "res/harmonicminor.svg", "res/melodicminor.svg", "res/dorian.svg",
+			"res/phrygian.svg", "res/lydian.svg", "res/mixolydian.svg", "res/locrian.svg", "res/majorpentatonic.svg",
+			"res/minorpentatonic.svg", "res/blues.svg", "res/wholetone.svg", "res/diminishedhalfwhole.svg",
+			"res/diminishedwholehalf.svg", "res/hungarianminor.svg", "res/phrygiandominant.svg", "res/japanesein.svg",
+			"res/hirojoshi.svg"
+		};
+		modeDisplay->frames.reserve(modeAssets.size());
+		for (const auto& assetPath : modeAssets) {
+			if (system::exists(asset::plugin(pluginInstance, assetPath))) modeDisplay->frames.push_back(APP->window->loadSvg(asset::plugin(pluginInstance, assetPath)));
+			else modeDisplay->frames.push_back(nullptr);
+		}
+		modeDisplay->getIndex = [module]() {
+			if (!module) return 0;
+			return static_cast<int>(module->mode);
+		};
+		addChild(modeDisplay);
 
 		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.0, 100.0)), module, GinaArp::CLOCK_INPUT));
 		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(23.0, 100.0)), module, GinaArp::GATE_INPUT));
