@@ -285,6 +285,7 @@ struct GinaArpWidget : ModuleWidget {
 			? "res/gina.svg"
 			: "res/GinaArp.svg";
 		setPanel(createPanel(asset::plugin(pluginInstance, panelAsset)));
+		box.size = Vec(RACK_GRID_WIDTH * 10, RACK_GRID_HEIGHT);
 
 			addParam(createParamCentered<GinaLargeKnob>(mm2px(Vec(24.0, 18.9)), module, GinaArp::RANGE_PARAM));
 			addParam(createParamCentered<GinaSmallKnob>(mm2px(Vec(24.0, 54.3)), module, GinaArp::RANGE_ATTEN_PARAM));
