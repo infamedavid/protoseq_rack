@@ -2,9 +2,9 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="39.745918mm"
+   width="47.695102mm"
    height="100.5406mm"
-   viewBox="0 0 39.745918 100.5406"
+   viewBox="0 0 47.695102 100.5406"
    version="1.1"
    id="svg1"
    sodipodi:docname="gina.svg"
@@ -38,7 +38,7 @@
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(-85.195831,-98.160416)">
+     transform="translate(-85.195831,-98.160416) scale(1.2,1)">
     <rect
        style="fill:#e6e6e6;stroke:none;stroke-width:0.575"
        id="rect6"
