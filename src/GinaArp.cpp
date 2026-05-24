@@ -115,6 +115,9 @@ struct GinaArp : Module {
 		configParam(ODTS_ATTEN_PARAM, -1.f, 1.f, 0.f, "ODTS attenuverter", "%", 0.f, 100.f);
 		configParam(SEED_PARAM, 0.f, 1.f, 0.f, "SEED", "", 0.f, 1.f);
 		configParam(ARP_LEN_PARAM, 1.f, 13.f, 4.f, "ARP LEN");
+		if (ParamQuantity* arpLenQuantity = getParamQuantity(ARP_LEN_PARAM)) {
+			arpLenQuantity->snapEnabled = true;
+		}
 		configButton(KEY_PREV_PARAM, "KEY previous");
 		configButton(KEY_NEXT_PARAM, "KEY next");
 		configButton(MODE_PREV_PARAM, "MODE previous");
