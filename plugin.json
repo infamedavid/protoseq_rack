@@ -14,7 +14,7 @@
     {
       "slug": "GinasARP",
       "name": "Gina’s ARP",
-      "description": "Prototype arpeggiator module skeleton",
+      "description": "Voltage-controlled generative arpeggio module based on the Gina’s ARP step engine from Protoseq",
       "tags": ["Sequencer"]
     }
   ]
