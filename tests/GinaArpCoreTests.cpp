@@ -1,4 +1,5 @@
 #include "../src/GinaArpCore.hpp"
+#include "../src/GinaArpRandom.hpp"
 #include "../src/GinaArpScales.hpp"
 
 #include <algorithm>
@@ -161,6 +162,16 @@ int main() {
     assert(hasFlat5);
 
     // 10) Seed tests
+    // Seed control bucket mapping: >0 enters fixed mode with 1..1000 rounded buckets.
+    const auto toSeedBucket = [](float seedControl)->int {
+        return std::clamp(static_cast<int>(std::lround(clamp01(seedControl) * 1000.0f)), 1, 1000);
+    };
+    assert(toSeedBucket(0.0001f) == 1);
+    assert(toSeedBucket(0.001f) == 1);
+    assert(toSeedBucket(0.500f) == 500);
+    assert(toSeedBucket(0.999f) == 999);
+    assert(toSeedBucket(1.000f) == 1000);
+
     GinaArpContext sd{0, Mode::Major, 72, 0.4f, 0.0f, 4, 0.75f, 3};
     int n1 = core.generateMidiNote(sd);
     int n2 = core.generateMidiNote(sd);
@@ -170,6 +181,26 @@ int main() {
     bool eventuallyDifferent = (n3 != n1);
     if (!eventuallyDifferent) { sd2.noteIndex = 4; eventuallyDifferent = (core.generateMidiNote(sd2) != n1); }
     assert(eventuallyDifferent);
+
+    // Seed identity includes fixedSeed, noteIndex, pivot, key, mode, and range bucket.
+    const int seedBucket = toSeedBucket(0.75f);
+    const int rangeBucket = std::clamp(static_cast<int>(std::lround(clamp01(sd.effectiveRange) * 1000.0f)), 0, 1000);
+    const std::uint64_t stableA = buildDeterministicSeed(seedBucket, sd.noteIndex, sd.pivotMidi, sd.keyRootSemitone, static_cast<int>(sd.mode), rangeBucket);
+    const std::uint64_t stableB = buildDeterministicSeed(seedBucket, sd.noteIndex, sd.pivotMidi, sd.keyRootSemitone, static_cast<int>(sd.mode), rangeBucket);
+    assert(stableA == stableB);
+
+    // Mutable mode (seedControl==0) should not collapse to deterministic repeats.
+    GinaArpContext mut{0, Mode::Major, 72, 1.0f, 0.0f, 4, 0.0f, 9};
+    const int mutableTrials = 32;
+    int mutableFirst = core.generateMidiNote(mut);
+    bool mutableVaries = false;
+    for (int i = 0; i < mutableTrials; ++i) {
+        if (core.generateMidiNote(mut) != mutableFirst) {
+            mutableVaries = true;
+            break;
+        }
+    }
+    assert(mutableVaries);
 
     // 11) fallback
     GinaArpContext fb{0, Mode::Major, 1, 0.0f, 0.0f, 4, 0.2f, 1};
