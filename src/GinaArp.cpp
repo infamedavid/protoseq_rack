@@ -109,27 +109,27 @@ struct GinaArp : Module {
 	GinaArp() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 
-		configParam(RANGE_PARAM, 0.f, 1.f, 0.25f, "Range");
-		configParam(RANGE_ATTEN_PARAM, -1.f, 1.f, 0.f, "Range CV attenuverter");
-		configParam(ODTS_PARAM, 0.f, 1.f, 0.f, "ODTS");
-		configParam(ODTS_ATTEN_PARAM, -1.f, 1.f, 0.f, "ODTS CV attenuverter");
-		configParam(SEED_PARAM, 0.f, 1.f, 0.f, "Seed");
+		configParam(RANGE_PARAM, 0.f, 1.f, 0.25f, "RANGE", "", 0.f, 1.f);
+		configParam(RANGE_ATTEN_PARAM, -1.f, 1.f, 0.f, "RANGE attenuverter", "%", 0.f, 100.f);
+		configParam(ODTS_PARAM, 0.f, 1.f, 0.f, "ODTS", "", 0.f, 1.f);
+		configParam(ODTS_ATTEN_PARAM, -1.f, 1.f, 0.f, "ODTS attenuverter", "%", 0.f, 100.f);
+		configParam(SEED_PARAM, 0.f, 1.f, 0.f, "SEED", "", 0.f, 1.f);
 		configParam(ARP_LEN_PARAM, 1.f, 13.f, 4.f, "ARP LEN");
-		configButton(KEY_PREV_PARAM, "Key previous");
-		configButton(KEY_NEXT_PARAM, "Key next");
-		configButton(MODE_PREV_PARAM, "Mode previous");
-		configButton(MODE_NEXT_PARAM, "Mode next");
-		configSwitch(PIVOT_MODE_PARAM, 0.f, 1.f, 0.f, "Pivot input mode", {"QNT", "RAW"});
+		configButton(KEY_PREV_PARAM, "KEY previous");
+		configButton(KEY_NEXT_PARAM, "KEY next");
+		configButton(MODE_PREV_PARAM, "MODE previous");
+		configButton(MODE_NEXT_PARAM, "MODE next");
+		configSwitch(PIVOT_MODE_PARAM, 0.f, 1.f, 0.f, "QNT/RAW pivot mode", {"QNT", "RAW"});
 
-		configInput(CLOCK_INPUT, "Clock");
-		configInput(GATE_INPUT, "Gate");
-		configInput(VOCT_INPUT, "V/Oct");
-		configInput(RANGE_CV_INPUT, "Range CV");
-		configInput(ODTS_CV_INPUT, "ODTS CV");
-		configInput(SEED_CV_INPUT, "Seed CV");
+		configInput(CLOCK_INPUT, "CLOCK IN (triggers each note while GATE IN is high)");
+		configInput(GATE_INPUT, "GATE IN (arpeggio enable; CLOCK ignored while low)");
+		configInput(VOCT_INPUT, "V/OCT IN (pivot source: QNT quantizes to KEY+MODE, RAW preserves input)");
+		configInput(RANGE_CV_INPUT, "RANGE CV (modulates RANGE through bipolar attenuverter)");
+		configInput(ODTS_CV_INPUT, "ODTS CV (modulates ODTS through bipolar attenuverter)");
+		configInput(SEED_CV_INPUT, "SEED CV (modulates SEED; 0 keeps mutable if effective seed is 0)");
 
-		configOutput(VOCT_OUTPUT, "V/Oct");
-		configOutput(GATE_OUTPUT, "Gate");
+		configOutput(VOCT_OUTPUT, "V/OCT OUT (generated Gina’s ARP pitch)");
+		configOutput(GATE_OUTPUT, "GATE OUT (10V while CLOCK and GATE are high; no internal gate length)");
 	}
 
 	void process(const ProcessArgs& args) override {
