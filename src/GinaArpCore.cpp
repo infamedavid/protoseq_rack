@@ -58,15 +58,19 @@ bool isIntervalAllowedInZone(
         return false;
     }
 
-    if (zone == RegisterZone::Zone5 || zone == RegisterZone::Zone6) {
-        return true;
-    }
-
     std::set<int> allowed;
     allowed.insert(0);
 
     const auto has = [&allowedScaleIntervalsRelativeToPivot](int interval) {
         return allowedScaleIntervalsRelativeToPivot.find(interval) != allowedScaleIntervalsRelativeToPivot.end();
+    };
+
+    const auto addIfPresent = [&](std::initializer_list<int> intervals) {
+        for (int interval : intervals) {
+            if (has(interval)) {
+                allowed.insert(interval);
+            }
+        }
     };
 
     if (zone >= RegisterZone::Zone1) {
@@ -86,19 +90,15 @@ bool isIntervalAllowedInZone(
     }
 
     if (zone >= RegisterZone::Zone3) {
-        for (int interval : {8, 9, 10, 11}) {
-            if (has(interval)) {
-                allowed.insert(interval);
-            }
-        }
+        addIfPresent({8, 9, 10, 11});
     }
 
     if (zone >= RegisterZone::Zone4) {
-        for (int interval : {1, 2, 5, 6}) {
-            if (has(interval)) {
-                allowed.insert(interval);
-            }
-        }
+        addIfPresent({1, 2, 5, 6});
+    }
+
+    if (zone >= RegisterZone::Zone5) {
+        return true;
     }
 
     return allowed.find(intervalClass) != allowed.end();
