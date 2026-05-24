@@ -43,6 +43,7 @@ struct GinaArp : Module {
 	Mode mode = Mode::Major;
 	int noteIndex = 0;
 	float heldVolts = 0.0f;
+	bool lastGateHigh = false;
 
 	GinaArp() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -57,7 +58,7 @@ struct GinaArp : Module {
 		configButton(KEY_NEXT_PARAM, "Key next");
 		configButton(MODE_PREV_PARAM, "Mode previous");
 		configButton(MODE_NEXT_PARAM, "Mode next");
-		configSwitch(PIVOT_MODE_PARAM, 0.f, 1.f, 0.f, "Pivot input mode", {"Quantized", "Raw"});
+		configSwitch(PIVOT_MODE_PARAM, 0.f, 1.f, 0.f, "Pivot input mode", {"QNT", "RAW"});
 
 		configInput(CLOCK_INPUT, "Clock");
 		configInput(GATE_INPUT, "Gate");
@@ -78,13 +79,19 @@ struct GinaArp : Module {
 		const bool clockHigh = clockVoltage >= 1.0f;
 
 		const bool gateRising = gateTrigger.process(gateVoltage);
+		const bool gateFalling = lastGateHigh && !gateHigh;
 		const bool clockRising = clockTrigger.process(clockVoltage);
+		lastGateHigh = gateHigh;
 
 		if (gateRising) {
 			noteIndex = 0;
 		}
 
-		outputs[GATE_OUTPUT].setVoltage((gateHigh && clockHigh) ? 10.0f : 0.0f);
+		if (gateFalling) {
+			outputs[GATE_OUTPUT].setVoltage(0.0f);
+		} else {
+			outputs[GATE_OUTPUT].setVoltage((gateHigh && clockHigh) ? 10.0f : 0.0f);
+		}
 
 		if (!gateHigh) {
 			outputs[VOCT_OUTPUT].setVoltage(heldVolts);
