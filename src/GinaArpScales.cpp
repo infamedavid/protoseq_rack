@@ -1,6 +1,7 @@
 #include "GinaArpScales.hpp"
 
 #include <array>
+#include <set>
 #include <stdexcept>
 
 namespace protoseq {
@@ -93,6 +94,18 @@ std::vector<int> oddityPitchClassesRelativeToKey(int keyRootSemitone, Mode mode)
         }
     }
     return oddities;
+}
+
+std::set<int> scaleIntervalsRelativeToPivot(Mode mode, int keyRootSemitone, int pivotMidi) {
+    const int key = mod12(keyRootSemitone);
+    const int pivotClass = mod12(pivotMidi);
+
+    std::set<int> relativeIntervals;
+    for (int intervalFromKey : scaleIntervals(mode)) {
+        const int scalePitchClass = mod12(key + intervalFromKey);
+        relativeIntervals.insert(mod12(scalePitchClass - pivotClass));
+    }
+    return relativeIntervals;
 }
 
 } // namespace protoseq

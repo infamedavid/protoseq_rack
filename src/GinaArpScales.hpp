@@ -1,5 +1,6 @@
 #pragma once
 
+#include <set>
 #include <vector>
 
 namespace protoseq {
@@ -29,5 +30,6 @@ enum class Mode {
 const std::vector<int>& scaleIntervals(Mode mode);
 bool pitchClassInMode(int keyRootSemitone, Mode mode, int midiNote);
 std::vector<int> oddityPitchClassesRelativeToKey(int keyRootSemitone, Mode mode);
+std::set<int> scaleIntervalsRelativeToPivot(Mode mode, int keyRootSemitone, int pivotMidi);
 
 } // namespace protoseq

@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <set>
 
 namespace protoseq {
 namespace {
@@ -49,16 +50,40 @@ int zoneIndex(RegisterZone zone) {
     return static_cast<int>(zone);
 }
 
-bool intervalAllowedInZone(RegisterZone zone, int intervalClass) {
+bool isIntervalAllowedInZone(
+    int intervalClass,
+    const std::set<int>& allowedScaleIntervalsRelativeToPivot,
+    RegisterZone zone) {
+    if (allowedScaleIntervalsRelativeToPivot.find(intervalClass) == allowedScaleIntervalsRelativeToPivot.end()) {
+        return false;
+    }
+
+    const auto has = [&allowedScaleIntervalsRelativeToPivot](int interval) {
+        return allowedScaleIntervalsRelativeToPivot.find(interval) != allowedScaleIntervalsRelativeToPivot.end();
+    };
+
     switch (zone) {
-        case RegisterZone::Zone0: return intervalClass == 0;
-        case RegisterZone::Zone1: return intervalClass == 0 || intervalClass == 7;
-        case RegisterZone::Zone2: return intervalClass == 0 || intervalClass == 7 || intervalClass == 3 || intervalClass == 4;
-        case RegisterZone::Zone3: return intervalClass == 0 || intervalClass == 7 || intervalClass == 3 || intervalClass == 4 ||
-                                         intervalClass == 8 || intervalClass == 9 || intervalClass == 10 || intervalClass == 11;
-        case RegisterZone::Zone4: return intervalClass == 0 || intervalClass == 7 || intervalClass == 3 || intervalClass == 4 ||
-                                         intervalClass == 8 || intervalClass == 9 || intervalClass == 10 || intervalClass == 11 ||
-                                         intervalClass == 5 || intervalClass == 2;
+        case RegisterZone::Zone0:
+            return intervalClass == 0;
+        case RegisterZone::Zone1:
+            if (intervalClass == 0) return true;
+            if (has(7)) return intervalClass == 7;
+            if (has(6)) return intervalClass == 6;
+            return false;
+        case RegisterZone::Zone2:
+            if (intervalClass == 0) return true;
+            if (has(7) && intervalClass == 7) return true;
+            if (!has(7) && has(6) && intervalClass == 6) return true;
+            if (has(3)) return intervalClass == 3;
+            if (has(4)) return intervalClass == 4;
+            return false;
+        case RegisterZone::Zone3:
+            return intervalClass == 0 || intervalClass == 7 || intervalClass == 6 || intervalClass == 3 || intervalClass == 4 ||
+                   intervalClass == 8 || intervalClass == 9 || intervalClass == 10 || intervalClass == 11;
+        case RegisterZone::Zone4:
+            return intervalClass == 0 || intervalClass == 7 || intervalClass == 6 || intervalClass == 3 || intervalClass == 4 ||
+                   intervalClass == 8 || intervalClass == 9 || intervalClass == 10 || intervalClass == 11 ||
+                   intervalClass == 1 || intervalClass == 2 || intervalClass == 5 || intervalClass == 6;
         case RegisterZone::Zone5:
         case RegisterZone::Zone6:
             return true;
@@ -126,6 +151,8 @@ std::vector<GinaCandidate> GinaArpCore::generateCandidates(const GinaArpContext&
     const int windowMin = clampMidi(pivotMidi - rangeSemitones);
     const int windowMax = clampMidi(pivotMidi + rangeSemitones);
 
+    const auto allowedIntervals = scaleIntervalsRelativeToPivot(ctx.mode, ctx.keyRootSemitone, pivotMidi);
+
     float tonalWeightCeiling = 0.01f;
 
     for (int midi = windowMin; midi <= windowMax; ++midi) {
@@ -133,7 +160,7 @@ std::vector<GinaCandidate> GinaArpCore::generateCandidates(const GinaArpContext&
 
         const int intervalClass = mod12(midi - pivotMidi);
         const RegisterZone zone = zoneFromMidi(midi);
-        if (!intervalAllowedInZone(zone, intervalClass)) continue;
+        if (!isIntervalAllowedInZone(intervalClass, allowedIntervals, zone)) continue;
 
         float weight = baseTonalWeight(intervalClass);
         if (intervalClass == 1 || intervalClass == 2 || intervalClass == 5 || intervalClass == 6) {
@@ -147,11 +174,17 @@ std::vector<GinaCandidate> GinaArpCore::generateCandidates(const GinaArpContext&
     }
 
     if (effectiveODTS <= 0.0f) {
+        if (candidates.empty()) {
+            candidates.push_back({pivotMidi, 0, zoneFromMidi(pivotMidi), 10.0f, false});
+        }
         return candidates;
     }
 
     const auto oddityPitchClasses = oddityPitchClassesRelativeToKey(ctx.keyRootSemitone, ctx.mode);
     if (oddityPitchClasses.empty()) {
+        if (candidates.empty()) {
+            candidates.push_back({pivotMidi, 0, zoneFromMidi(pivotMidi), 10.0f, false});
+        }
         return candidates;
     }
 
@@ -180,6 +213,9 @@ std::vector<GinaCandidate> GinaArpCore::generateCandidates(const GinaArpContext&
         candidates.push_back({midi, mod12(midi - pivotMidi), zoneFromMidi(midi), oddityWeight, true});
     }
 
+    if (candidates.empty()) {
+        candidates.push_back({pivotMidi, 0, zoneFromMidi(pivotMidi), 10.0f, false});
+    }
     return candidates;
 }
 
