@@ -6,6 +6,11 @@ using namespace protoseq;
 
 namespace {
 
+template <typename T>
+T clampValue(T value, T minValue, T maxValue) {
+	return value < minValue ? minValue : (value > maxValue ? maxValue : value);
+}
+
 template <typename TWidget>
 std::shared_ptr<Svg> loadOptionalSvg(const std::string& assetPath) {
 	const std::string fullPath = asset::plugin(pluginInstance, assetPath);
@@ -230,7 +235,7 @@ struct GinaArp : Module {
 		if (modeJ) {
 			const int rawMode = static_cast<int>(json_integer_value(modeJ));
 			const int modeCount = static_cast<int>(Mode::Hirojoshi) + 1;
-			const int clamped = std::clamp(rawMode, 0, modeCount - 1);
+			const int clamped = clampValue(rawMode, 0, modeCount - 1);
 			mode = static_cast<Mode>(clamped);
 		}
 	}

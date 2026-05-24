@@ -18,8 +18,13 @@ constexpr float kOddityC6MaxFactor = 0.40f;
 constexpr float kOddityC7MinFactor = 0.50f;
 constexpr float kOddityC7MaxFactor = 1.00f;
 
+template <typename T>
+T clampValue(T value, T minValue, T maxValue) {
+    return value < minValue ? minValue : (value > maxValue ? maxValue : value);
+}
+
 int clampMidi(int midi) {
-    return std::clamp(midi, kMidiMin, kMidiMax);
+    return clampValue(midi, kMidiMin, kMidiMax);
 }
 
 int mod12(int value) {
@@ -29,7 +34,7 @@ int mod12(int value) {
 }
 
 float clamp01(float v) {
-    return std::clamp(v, 0.0f, 1.0f);
+    return clampValue(v, 0.0f, 1.0f);
 }
 
 float lerp(float a, float b, float t) {
@@ -143,7 +148,7 @@ float midiToVoltage(int midi) {
 
 bool shouldForcePivot(int noteIndex, int arpLen) {
     if (noteIndex <= 0) return true;
-    const int safeArpLen = std::clamp(arpLen, 1, 13);
+    const int safeArpLen = clampValue(arpLen, 1, 13);
     return (noteIndex % safeArpLen) == 0;
 }
 
@@ -221,7 +226,7 @@ std::vector<GinaCandidate> GinaArpCore::generateCandidates(const GinaArpContext&
         const float progressiveFactor = lerp(factorAtC6, factorAtC7, registerProgress);
 
         float oddityWeight = tonalWeightCeiling * effectiveODTS * progressiveFactor;
-        oddityWeight = std::clamp(oddityWeight, 0.0f, tonalWeightCeiling);
+        oddityWeight = clampValue(oddityWeight, 0.0f, tonalWeightCeiling);
         if (oddityWeight <= 0.0f) continue;
 
         candidates.push_back({midi, mod12(midi - pivotMidi), zoneFromMidi(midi), oddityWeight, true});
@@ -255,8 +260,8 @@ int GinaArpCore::generateMidiNote(const GinaArpContext& ctx) {
     if (seedFloat <= 0.0f) {
         pick = chooseWeightedIndexMutable(weighted);
     } else {
-        const int seedBucket = std::clamp(static_cast<int>(std::lround(seedFloat * 1000.0f)), 1, 1000);
-        const int rangeBucket = std::clamp(static_cast<int>(std::lround(clamp01(ctx.effectiveRange) * 1000.0f)), 0, 1000);
+        const int seedBucket = clampValue(static_cast<int>(std::lround(seedFloat * 1000.0f)), 1, 1000);
+        const int rangeBucket = clampValue(static_cast<int>(std::lround(clamp01(ctx.effectiveRange) * 1000.0f)), 0, 1000);
         const auto stableSeed = buildDeterministicSeed(
             seedBucket,
             ctx.noteIndex,
