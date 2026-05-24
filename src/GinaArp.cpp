@@ -58,7 +58,7 @@ struct GinaArp : Module {
 		configButton(KEY_NEXT_PARAM, "Key next");
 		configButton(MODE_PREV_PARAM, "Mode previous");
 		configButton(MODE_NEXT_PARAM, "Mode next");
-		configSwitch(PIVOT_MODE_PARAM, 0.f, 1.f, 0.f, "Pivot input mode", {"Quantized", "Raw"});
+		configSwitch(PIVOT_MODE_PARAM, 0.f, 1.f, 0.f, "Pivot input mode", {"QNT", "RAW"});
 
 		configInput(CLOCK_INPUT, "Clock");
 		configInput(GATE_INPUT, "Gate");
