@@ -167,8 +167,13 @@ std::vector<GinaCandidate> GinaArpCore::generateCandidates(const GinaArpContext&
     const float effectiveRange = clamp01(ctx.effectiveRange);
     const float effectiveODTS = clamp01(ctx.effectiveODTS);
     const int rangeSemitones = static_cast<int>(std::lround(48.0f * effectiveRange));
-    const int windowMin = clampMidi(pivotMidi - rangeSemitones);
-    const int windowMax = clampMidi(pivotMidi + rangeSemitones);
+    int windowMin = pivotMidi;
+    int windowMax = pivotMidi + rangeSemitones;
+    if (ctx.rangeMode == RangeMode::Bipolar) {
+        windowMin = pivotMidi - rangeSemitones;
+    }
+    windowMin = clampMidi(windowMin);
+    windowMax = clampMidi(windowMax);
 
     const auto allowedIntervals = scaleIntervalsRelativeToPivot(ctx.mode, ctx.keyRootSemitone, pivotMidi);
 
