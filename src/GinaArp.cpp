@@ -279,7 +279,7 @@ struct GinaArpImageDisplay : TransparentWidget {
 };
 
 
-static constexpr float GINAS_ARP_MOCKUP_W = 391.0f;
+static constexpr float GINAS_ARP_MOCKUP_W = 391.0f * 1.3f;
 static constexpr float GINAS_ARP_MOCKUP_H = 990.0f;
 
 static Vec mockupPx(float x, float y) {
