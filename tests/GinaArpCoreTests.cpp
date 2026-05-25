@@ -162,28 +162,44 @@ int main() {
     assert(hasFlat5);
 
     // 10) Seed tests
-    // Seed control bucket mapping: >0 enters fixed mode with 1..1000 rounded buckets.
+    // Seed bucket mapping: 0 = mutable, 1..100 = deterministic fixed seeds.
     const auto toSeedBucket = [](float seedControl)->int {
-        return std::clamp(static_cast<int>(std::lround(clamp01(seedControl) * 1000.0f)), 1, 1000);
+        return std::clamp(static_cast<int>(std::lround(seedControl)), 0, 100);
     };
-    assert(toSeedBucket(0.0001f) == 1);
-    assert(toSeedBucket(0.001f) == 1);
-    assert(toSeedBucket(0.500f) == 500);
-    assert(toSeedBucket(0.999f) == 999);
-    assert(toSeedBucket(1.000f) == 1000);
+    assert(toSeedBucket(-4.2f) == 0);
+    assert(toSeedBucket(0.0f) == 0);
+    assert(toSeedBucket(1.0f) == 1);
+    assert(toSeedBucket(100.0f) == 100);
+    assert(toSeedBucket(400.0f) == 100);
 
-    GinaArpContext sd{0, Mode::Major, 72, 0.4f, 0.0f, 4, 0.75f, 3};
-    int n1 = core.generateMidiNote(sd);
-    int n2 = core.generateMidiNote(sd);
-    assert(n1 == n2);
-    GinaArpContext sd2 = sd; sd2.seedControl = 0.76f;
-    int n3 = core.generateMidiNote(sd2);
-    bool eventuallyDifferent = (n3 != n1);
-    if (!eventuallyDifferent) { sd2.noteIndex = 4; eventuallyDifferent = (core.generateMidiNote(sd2) != n1); }
+    GinaArpContext sd{0, Mode::Major, 72, 0.4f, 0.0f, 4, 1.0f, 3};
+    int s1a = core.generateMidiNote(sd);
+    int s1b = core.generateMidiNote(sd);
+    assert(s1a == s1b);
+
+    GinaArpContext sd50 = sd; sd50.seedControl = 50.0f;
+    int s50a = core.generateMidiNote(sd50);
+    int s50b = core.generateMidiNote(sd50);
+    assert(s50a == s50b);
+
+    GinaArpContext sd100 = sd; sd100.seedControl = 100.0f;
+    int s100a = core.generateMidiNote(sd100);
+    int s100b = core.generateMidiNote(sd100);
+    assert(s100a == s100b);
+
+    bool eventuallyDifferent = false;
+    for (int idx = 0; idx < 24 && !eventuallyDifferent; ++idx) {
+        GinaArpContext a = sd;
+        GinaArpContext b = sd;
+        a.noteIndex = idx;
+        b.noteIndex = idx;
+        b.seedControl = 50.0f;
+        eventuallyDifferent = (core.generateMidiNote(a) != core.generateMidiNote(b));
+    }
     assert(eventuallyDifferent);
 
     // Seed identity includes fixedSeed, noteIndex, pivot, key, mode, and range bucket.
-    const int seedBucket = toSeedBucket(0.75f);
+    const int seedBucket = toSeedBucket(50.0f);
     const int rangeBucket = std::clamp(static_cast<int>(std::lround(clamp01(sd.effectiveRange) * 1000.0f)), 0, 1000);
     const std::uint64_t stableA = buildDeterministicSeed(seedBucket, sd.noteIndex, sd.pivotMidi, sd.keyRootSemitone, static_cast<int>(sd.mode), rangeBucket);
     const std::uint64_t stableB = buildDeterministicSeed(seedBucket, sd.noteIndex, sd.pivotMidi, sd.keyRootSemitone, static_cast<int>(sd.mode), rangeBucket);
