@@ -118,10 +118,7 @@ struct GinaArp : Module {
 		configParam(RANGE_ATTEN_PARAM, -1.f, 1.f, 0.f, "RANGE attenuverter", "%", 0.f, 100.f);
 		configParam(ODTS_PARAM, 0.f, 1.f, 0.f, "ODTS", "", 0.f, 1.f);
 		configParam(ODTS_ATTEN_PARAM, -1.f, 1.f, 0.f, "ODTS attenuverter", "%", 0.f, 100.f);
-		configParam(SEED_PARAM, 0.f, 100.f, 1.f, "SEED");
-		if (ParamQuantity* seedQuantity = getParamQuantity(SEED_PARAM)) {
-			seedQuantity->snapEnabled = true;
-		}
+		configParam(SEED_PARAM, 0.f, 1.f, 0.f, "SEED", "", 0.f, 1.f);
 		configParam(ARP_LEN_PARAM, 1.f, 13.f, 4.f, "ARP LEN");
 		if (ParamQuantity* arpLenQuantity = getParamQuantity(ARP_LEN_PARAM)) {
 			arpLenQuantity->snapEnabled = true;
@@ -137,7 +134,7 @@ struct GinaArp : Module {
 		configInput(VOCT_INPUT, "V/OCT IN (pivot source: QNT quantizes to KEY+MODE, RAW preserves input)");
 		configInput(RANGE_CV_INPUT, "RANGE CV (modulates RANGE through bipolar attenuverter)");
 		configInput(ODTS_CV_INPUT, "ODTS CV (modulates ODTS through bipolar attenuverter)");
-		configInput(SEED_CV_INPUT, "SEED: 0 = mutable/random, 1..100 = fixed deterministic seed (CV modulates bucket)");
+		configInput(SEED_CV_INPUT, "SEED CV (normalized: 0 = mutable/random, >0 = fixed deterministic seed)");
 
 		configOutput(VOCT_OUTPUT, "V/OCT OUT (generated Gina’s ARP pitch)");
 		configOutput(GATE_OUTPUT, "GATE OUT (10V while CLOCK and GATE are high; no internal gate length)");
@@ -193,14 +190,13 @@ struct GinaArp : Module {
 
 		const float rangeCv = inputs[RANGE_CV_INPUT].isConnected() ? (inputs[RANGE_CV_INPUT].getVoltage() / 10.0f) * params[RANGE_ATTEN_PARAM].getValue() : 0.0f;
 		const float odtsCv = inputs[ODTS_CV_INPUT].isConnected() ? (inputs[ODTS_CV_INPUT].getVoltage() / 10.0f) * params[ODTS_ATTEN_PARAM].getValue() : 0.0f;
-		const float seedKnob = params[SEED_PARAM].getValue();
-		const float seedCvScaled = inputs[SEED_CV_INPUT].isConnected()
-			? (inputs[SEED_CV_INPUT].getVoltage() / 10.0f) * 100.0f
+		const float seedCv = inputs[SEED_CV_INPUT].isConnected()
+			? (inputs[SEED_CV_INPUT].getVoltage() / 10.0f)
 			: 0.0f;
-		const int effectiveSeedInt = clampValue(
-			static_cast<int>(std::round(seedKnob + seedCvScaled)),
-			0,
-			100
+		const float effectiveSeed = clampValue(
+			params[SEED_PARAM].getValue() + seedCv,
+			0.0f,
+			1.0f
 		);
 
 		const float effectiveRange = clamp(params[RANGE_PARAM].getValue() + rangeCv, 0.0f, 1.0f);
@@ -218,7 +214,7 @@ struct GinaArp : Module {
 			effectiveRange,
 			effectiveODTS,
 			arpLen,
-			static_cast<float>(effectiveSeedInt),
+			effectiveSeed,
 			noteIndex
 		};
 

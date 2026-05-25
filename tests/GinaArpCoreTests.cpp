@@ -166,11 +166,30 @@ int main() {
     const auto toSeedBucket = [](float seedControl)->int {
         return std::clamp(static_cast<int>(std::lround(seedControl * 1000.0f)), 1, 1000);
     };
-    assert(toSeedBucket(-4.2f) == 1);
     assert(toSeedBucket(0.001f) == 1);
+    assert(toSeedBucket(0.456f) == 456);
     assert(toSeedBucket(1.0f) == 1000);
 
     GinaArpContext sd{0, Mode::Major, 72, 0.4f, 0.0f, 4, 1.0f, 3};
+
+    // Any seedControl > 0 must be deterministic for the same context.
+    GinaArpContext sd001 = sd;
+    sd001.seedControl = 0.001f;
+    int s001a = core.generateMidiNote(sd001);
+    int s001b = core.generateMidiNote(sd001);
+    assert(s001a == s001b);
+
+    GinaArpContext sd456 = sd;
+    sd456.seedControl = 0.456f;
+    int s456a = core.generateMidiNote(sd456);
+    int s456b = core.generateMidiNote(sd456);
+    assert(s456a == s456b);
+
+    GinaArpContext sd1 = sd;
+    sd1.seedControl = 1.0f;
+    int s1a = core.generateMidiNote(sd1);
+    int s1b = core.generateMidiNote(sd1);
+    assert(s1a == s1b);
 
     // With fixed seed and ARP LEN=4, phrase positions should repeat every 4 notes.
     GinaArpContext len4 = sd;

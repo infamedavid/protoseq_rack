@@ -255,7 +255,7 @@ int GinaArpCore::generateMidiNote(const GinaArpContext& ctx) {
         weighted.push_back({i, std::max(0.01f, candidates[i].weight)});
     }
 
-    const float seedFloat = ctx.seedControl;
+    const float seedFloat = clamp01(ctx.seedControl);
     const int seedBucket = clampValue(
         static_cast<int>(std::lround(seedFloat * 1000.0f)),
         1,
