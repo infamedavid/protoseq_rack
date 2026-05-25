@@ -1,30 +1,81 @@
 # Protoseq Rack
 
-Protoseq Rack is the **VCV Rack plugin/brand**.
-Gina’s ARP is one module inside Protoseq Rack, and future Protoseq modules may be added later.
+Protoseq Rack is a VCV Rack plugin of sequencer modules.
 
-## Gina’s ARP (module)
+## Gina’s ARP
 
-Gina’s ARP is based on the Gina’s ARP step engine from Protoseq.
+Gina’s ARP is a voltage-controlled generative arpeggio/sequencer module based on the Gina’s ARP step engine from Protoseq.
 
-- Inputs: **CLOCK IN**, **GATE IN**, **V/OCT IN** (+ RANGE CV, ODTS CV, SEED CV).
-- Outputs: **V/OCT OUT**, **GATE OUT**.
-- **V/OCT IN** selects pivot.
-- **KEY** and **MODE** remain fixed selector states (they are not rewritten by input pitch).
-- **RANGE** controls pitch reach around pivot.
-- **ODTS** opens progressive high-register chromatic oddities (without changing KEY or MODE).
-- **SEED** controls mutable/fixed generative identity:
-  - **SEED = 0** => mutable behavior
-  - **SEED > 0** => deterministic seed buckets (1..1000)
-- **ARP LEN** controls return-to-pivot cadence (not gate length).
-- **GATE OUT** follows external CLOCK pulse duration while GATE IN is high.
-- There is **no internal gate length** control.
-- V/OCT pivot mode switch:
-  - **QNT** (default): quantize incoming pivot to KEY+MODE
-  - **RAW**: use incoming pitch directly as pivot
+For the musical and technical background behind Gina’s ARP, see the Gina’s ARP paper:
+https://github.com/infamedavid/GinasARP
+
+### Inputs
+- CLOCK IN
+- GATE IN
+- V/OCT IN
+- RANGE CV
+- ODTS CV
+
+### Outputs
+- V/OCT OUT
+- GATE OUT
+
+### Controls
+- KEY
+- MODE
+- RANGE
+- ODTS
+- SEED
+- ARP LEN
+- QNT/RAW
+- Range mode (context menu)
+
+### Behavior summary
+- KEY and MODE define the fixed musical field.
+- V/OCT IN selects the pivot.
+- QNT quantizes incoming V/OCT to KEY + MODE.
+- RAW preserves incoming pitch as pivot.
+- Incoming V/OCT never changes KEY or MODE.
+- No mute-invalid mode.
 - No Chromatic mode.
-- No NaturalMinor duplicate.
+- No duplicate Natural Minor / Minor alias.
 
-For local manual validation in VCV Rack, see:
+### RANGE and RangeMode
+- RANGE controls the pitch window.
+- Default RangeMode is **UnipolarUp**, which opens the pitch window upward from the pivot.
+- **Bipolar** remains available as an alternate/advanced range mode.
+- RangeMode behavior is intentional.
 
-- `docs/GinaArp_VCV_Manual_Test_Checklist.md`
+### ODTS
+- ODTS opens progressive out-of-mode high-register notes.
+- ODTS does not change KEY or MODE.
+- ODTS does not reshape tonal weights.
+- ODTS is not harmonic correction.
+- ODTS is not tritone avoidance.
+
+### SEED
+- SEED = 0: mutable/random behavior.
+- SEED > 0: deterministic seed buckets (roughly 1..1000).
+- SEED has no dedicated CV input.
+
+### ARP LEN
+- ARP LEN range is 2..16.
+- ARP LEN controls return-to-pivot cadence.
+- ARP LEN does not control gate length.
+
+### Clock/Gate behavior
+- GATE IN keeps the phrase alive.
+- CLOCK IN triggers notes only while GATE IN is high.
+- GATE OUT is 10V while CLOCK IN and GATE IN are both high, otherwise 0V.
+- GATE OUT follows CLOCK pulse duration while GATE IN is high, with normalized 10V amplitude.
+- V/OCT OUT holds last pitch when GATE IN is low.
+- There is no internal gate length control.
+
+## Build/Test
+- `make test-core`
+- `make` (if Rack SDK is installed/configured)
+
+## License
+GPL-3.0-or-later.
+
+Copyright (C) 2026 InfameDavid / David Rodriguez
