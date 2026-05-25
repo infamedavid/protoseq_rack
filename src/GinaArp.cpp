@@ -365,8 +365,8 @@ struct GinaArpWidget : ModuleWidget {
 		addChild(modeDisplay);
 
 			addInput(createInputCentered<GinaJack>(mockupPx(84.41f, 618.38f), module, GinaArp::CLOCK_INPUT));
-			addInput(createInputCentered<GinaJack>(mockupPx(195.67f, 618.38f), module, GinaArp::RANGE_CV_INPUT));
-			addInput(createInputCentered<GinaJack>(mockupPx(306.93f, 618.38f), module, GinaArp::ODTS_CV_INPUT));
+			addInput(createInputCentered<GinaJack>(mockupPx(195.67f, 618.38f), module, GinaArp::ODTS_CV_INPUT));
+			addInput(createInputCentered<GinaJack>(mockupPx(306.93f, 618.38f), module, GinaArp::RANGE_CV_INPUT));
 			addInput(createInputCentered<GinaJack>(mockupPx(84.41f, 863.56f), module, GinaArp::VOCT_INPUT));
 			addInput(createInputCentered<GinaJack>(mockupPx(195.67f, 863.56f), module, GinaArp::GATE_INPUT));
 
