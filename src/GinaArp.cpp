@@ -119,7 +119,7 @@ struct GinaArp : Module {
 		configParam(ODTS_PARAM, 0.f, 1.f, 0.f, "ODTS", "", 0.f, 1.f);
 		configParam(ODTS_ATTEN_PARAM, -1.f, 1.f, 0.f, "ODTS attenuverter", "%", 0.f, 100.f);
 		configParam(SEED_PARAM, 0.f, 1.f, 0.f, "SEED", "", 0.f, 1.f);
-		configParam(ARP_LEN_PARAM, 1.f, 13.f, 4.f, "ARP LEN");
+		configParam(ARP_LEN_PARAM, 2.f, 16.f, 4.f, "ARP LEN");
 		if (ParamQuantity* arpLenQuantity = getParamQuantity(ARP_LEN_PARAM)) {
 			arpLenQuantity->snapEnabled = true;
 		}
@@ -197,7 +197,7 @@ struct GinaArp : Module {
 
 		const float effectiveRange = clamp(params[RANGE_PARAM].getValue() + rangeCv, 0.0f, 1.0f);
 		const float effectiveODTS = clamp(params[ODTS_PARAM].getValue() + odtsCv, 0.0f, 1.0f);
-		const int arpLen = static_cast<int>(std::round(clamp(params[ARP_LEN_PARAM].getValue(), 1.0f, 13.0f)));
+		const int arpLen = static_cast<int>(std::round(clamp(params[ARP_LEN_PARAM].getValue(), 2.0f, 16.0f)));
 
 		const PivotInputMode pivotMode = params[PIVOT_MODE_PARAM].getValue() >= 0.5f ? PivotInputMode::Raw : PivotInputMode::Quantized;
 		const float vOctIn = inputs[VOCT_INPUT].getVoltage();

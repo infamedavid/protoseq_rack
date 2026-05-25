@@ -148,7 +148,7 @@ float midiToVoltage(int midi) {
 
 bool shouldForcePivot(int noteIndex, int arpLen) {
     if (noteIndex <= 0) return true;
-    const int safeArpLen = clampValue(arpLen, 1, 13);
+    const int safeArpLen = clampValue(arpLen, 2, 16);
     return (noteIndex % safeArpLen) == 0;
 }
 
@@ -276,7 +276,7 @@ int GinaArpCore::generateMidiNote(const GinaArpContext& ctx) {
             0,
             1000
         );
-        const int safeArpLen = std::max(1, ctx.arpLen);
+        const int safeArpLen = clampValue(ctx.arpLen, 2, 16);
         const int phrasePosition = ctx.noteIndex % safeArpLen;
         const auto stableSeed = buildDeterministicSeed(
             seedBucket,

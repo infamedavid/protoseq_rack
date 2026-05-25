@@ -107,13 +107,30 @@ int main() {
     auto cc = core.generateCandidates(rClamp);
     for (const auto& c : tonalOnly(cc)) assert(c.midiNote >= 12 && c.midiNote <= 108);
 
-    // 6) ARP LEN
+    // 6) ARP LEN clamp + force-pivot cadence
+    assert(shouldForcePivot(0, 0));   // below range clamps to 2
+    assert(!shouldForcePivot(1, 0));
+    assert(shouldForcePivot(2, 0));
+
+    assert(shouldForcePivot(0, 2));
+    assert(!shouldForcePivot(1, 2));
+    assert(shouldForcePivot(2, 2));
+    assert(shouldForcePivot(4, 2));
+    assert(shouldForcePivot(6, 2));
+
     assert(shouldForcePivot(0, 4));
     assert(!shouldForcePivot(1, 4));
     assert(shouldForcePivot(4, 4));
     assert(shouldForcePivot(8, 4));
     assert(shouldForcePivot(12, 4));
-    assert(shouldForcePivot(1, 1));
+
+    assert(shouldForcePivot(0, 16));
+    assert(!shouldForcePivot(1, 16));
+    assert(shouldForcePivot(16, 16));
+    assert(shouldForcePivot(32, 16));
+
+    assert(shouldForcePivot(16, 99)); // above range clamps to 16
+    assert(!shouldForcePivot(15, 99));
 
     // 7) ODTS
     GinaArpContext od0{0, Mode::Major, 84, 0.4f, 0.0f, 4, 0.2f, 1, RangeMode::Bipolar};
@@ -256,7 +273,7 @@ int main() {
 
     // Seed identity includes fixedSeed bucket, phrase position, pivot, key, mode, and range bucket.
     const int seedBucket = toSeedBucket(0.5f);
-    const int safeArpLen = std::max(1, sd.arpLen);
+    const int safeArpLen = std::clamp(sd.arpLen, 2, 16);
     const int phrasePosition = sd.noteIndex % safeArpLen;
     const int rangeBucket = std::clamp(static_cast<int>(std::lround(clamp01(sd.effectiveRange) * 1000.0f)), 0, 1000);
     const std::uint64_t stableA = buildDeterministicSeed(seedBucket, phrasePosition, sd.pivotMidi, sd.keyRootSemitone, static_cast<int>(sd.mode), rangeBucket);
