@@ -5,17 +5,19 @@
   "license": "GPL-3.0-or-later",
   "brand": "Protoseq",
   "author": "InfameDavid",
-  "authorUrl": "",
-  "pluginUrl": "",
-  "manualUrl": "",
+  "authorUrl": "https://github.com/infamedavid",
+  "pluginUrl": "https://github.com/infamedavid/protoseq_rack",
+  "manualUrl": "https://github.com/infamedavid/protoseq_rack#readme",
   "sourceUrl": "https://github.com/infamedavid/protoseq_rack",
-  "donateUrl": "",
   "modules": [
     {
       "slug": "GinasARP",
       "name": "Gina’s ARP",
-      "description": "Voltage-controlled generative arpeggio module based on the Gina’s ARP step engine from Protoseq",
-      "tags": ["Sequencer"]
+      "description": "Voltage-controlled generative arpeggio/sequencer module based on the Gina’s ARP step engine from Protoseq",
+      "tags": [
+        "Arpeggiator",
+        "Sequencer"
+      ]
     }
   ]
 }
