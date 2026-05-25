@@ -2,12 +2,12 @@
 
 Protoseq Rack is a VCV Rack plugin of sequencer modules.
 
-## Current module: Gina’s ARP
+## Gina’s ARP
 
 Gina’s ARP is a voltage-controlled generative arpeggio/sequencer module based on the Gina’s ARP step engine from Protoseq.
 
-Technical/musical paper:
-- https://github.com/infamedavid/GinasARP
+For the musical and technical background behind Gina’s ARP, see the Gina’s ARP paper:
+https://github.com/infamedavid/GinasARP
 
 ### Inputs
 - CLOCK IN
@@ -77,3 +77,5 @@ Technical/musical paper:
 
 ## License
 GPL-3.0-or-later.
+
+Copyright (C) 2026 InfameDavid / David Rodriguez

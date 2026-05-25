@@ -9,13 +9,13 @@
   "pluginUrl": "https://github.com/infamedavid/protoseq_rack",
   "manualUrl": "https://github.com/infamedavid/protoseq_rack#readme",
   "sourceUrl": "https://github.com/infamedavid/protoseq_rack",
-  "donateUrl": "",
   "modules": [
     {
       "slug": "GinasARP",
       "name": "Gina’s ARP",
       "description": "Voltage-controlled generative arpeggio/sequencer module based on the Gina’s ARP step engine from Protoseq",
       "tags": [
+        "Arpeggiator",
         "Sequencer"
       ]
     }
