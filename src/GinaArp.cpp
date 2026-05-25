@@ -86,7 +86,6 @@ struct GinaArp : Module {
 		VOCT_INPUT,
 		RANGE_CV_INPUT,
 		ODTS_CV_INPUT,
-		SEED_CV_INPUT,
 		NUM_INPUTS
 	};
 	enum OutputId {
@@ -135,7 +134,6 @@ struct GinaArp : Module {
 		configInput(VOCT_INPUT, "V/OCT IN (pivot source: QNT quantizes to KEY+MODE, RAW preserves input)");
 		configInput(RANGE_CV_INPUT, "RANGE CV (modulates RANGE through bipolar attenuverter)");
 		configInput(ODTS_CV_INPUT, "ODTS CV (modulates ODTS through bipolar attenuverter)");
-		configInput(SEED_CV_INPUT, "SEED CV (normalized: 0 = mutable/random, >0 = fixed deterministic seed)");
 
 		configOutput(VOCT_OUTPUT, "V/OCT OUT (generated Gina’s ARP pitch)");
 		configOutput(GATE_OUTPUT, "GATE OUT (10V while CLOCK and GATE are high; no internal gate length)");
@@ -191,11 +189,8 @@ struct GinaArp : Module {
 
 		const float rangeCv = inputs[RANGE_CV_INPUT].isConnected() ? (inputs[RANGE_CV_INPUT].getVoltage() / 10.0f) * params[RANGE_ATTEN_PARAM].getValue() : 0.0f;
 		const float odtsCv = inputs[ODTS_CV_INPUT].isConnected() ? (inputs[ODTS_CV_INPUT].getVoltage() / 10.0f) * params[ODTS_ATTEN_PARAM].getValue() : 0.0f;
-		const float seedCv = inputs[SEED_CV_INPUT].isConnected()
-			? (inputs[SEED_CV_INPUT].getVoltage() / 10.0f)
-			: 0.0f;
 		const float effectiveSeed = clampValue(
-			params[SEED_PARAM].getValue() + seedCv,
+			params[SEED_PARAM].getValue(),
 			0.0f,
 			1.0f
 		);
@@ -372,7 +367,6 @@ struct GinaArpWidget : ModuleWidget {
 			addInput(createInputCentered<GinaJack>(mockupPx(84.41f, 618.38f), module, GinaArp::CLOCK_INPUT));
 			addInput(createInputCentered<GinaJack>(mockupPx(195.67f, 618.38f), module, GinaArp::RANGE_CV_INPUT));
 			addInput(createInputCentered<GinaJack>(mockupPx(306.93f, 618.38f), module, GinaArp::ODTS_CV_INPUT));
-			addInput(createInputCentered<GinaJack>(mockupPx(418.19f, 618.38f), module, GinaArp::SEED_CV_INPUT));
 			addInput(createInputCentered<GinaJack>(mockupPx(84.41f, 863.56f), module, GinaArp::VOCT_INPUT));
 			addInput(createInputCentered<GinaJack>(mockupPx(195.67f, 863.56f), module, GinaArp::GATE_INPUT));
 
