@@ -208,17 +208,16 @@ struct GinaArp : Module {
 		const float vOctIn = inputs[VOCT_INPUT].getVoltage();
 		const int pivotMidi = core.resolvePivotMidi(vOctIn, keyRootSemitone, mode, pivotMode);
 
-		const GinaArpContext ctx{
-			keyRootSemitone,
-			mode,
-			pivotMidi,
-			effectiveRange,
-			effectiveODTS,
-			arpLen,
-			effectiveSeed,
-			noteIndex,
-			rangeMode
-		};
+		GinaArpContext ctx;
+		ctx.keyRootSemitone = keyRootSemitone;
+		ctx.mode = mode;
+		ctx.pivotMidi = pivotMidi;
+		ctx.effectiveRange = effectiveRange;
+		ctx.effectiveODTS = effectiveODTS;
+		ctx.arpLen = arpLen;
+		ctx.seedControl = effectiveSeed;
+		ctx.noteIndex = noteIndex;
+		ctx.rangeMode = rangeMode;
 
 		const int midiOut = shouldForcePivot(noteIndex, arpLen) ? pivotMidi : core.generateMidiNote(ctx);
 		heldVolts = midiToVoltage(midiOut);
