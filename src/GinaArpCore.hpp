@@ -11,6 +11,11 @@ enum class PivotInputMode {
     Raw
 };
 
+enum class RangeMode {
+    UnipolarUp,
+    Bipolar
+};
+
 enum class RegisterZone {
     Zone0,
     Zone1,
@@ -38,6 +43,7 @@ struct GinaArpContext {
     int arpLen;
     float seedControl;
     int noteIndex;
+    RangeMode rangeMode = RangeMode::UnipolarUp;
 };
 
 int voltageToNearestMidi(float volts);
