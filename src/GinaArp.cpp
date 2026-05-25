@@ -279,12 +279,12 @@ struct GinaArpImageDisplay : TransparentWidget {
 };
 
 
-static constexpr float GINAS_ARP_MOCKUP_W = 391.0f * 1.3f;
+static constexpr float GINAS_ARP_MOCKUP_W = 499.5f;
 static constexpr float GINAS_ARP_MOCKUP_H = 990.0f;
 
 static Vec mockupPx(float x, float y) {
 	return Vec(
-		x * ((RACK_GRID_WIDTH * 13.0f) / GINAS_ARP_MOCKUP_W),
+		x * ((RACK_GRID_WIDTH * 10.0f) / GINAS_ARP_MOCKUP_W),
 		y * (RACK_GRID_HEIGHT / GINAS_ARP_MOCKUP_H)
 	);
 }
@@ -292,7 +292,7 @@ static Vec mockupPx(float x, float y) {
 struct GinaArpWidget : ModuleWidget {
 	GinaArpWidget(GinaArp* module) {
 		setModule(module);
-		box.size = Vec(RACK_GRID_WIDTH * 13, RACK_GRID_HEIGHT);
+		box.size = Vec(RACK_GRID_WIDTH * 10, RACK_GRID_HEIGHT);
 		const std::string panelAsset = system::exists(asset::plugin(pluginInstance, "res/gina.svg"))
 			? "res/gina.svg"
 			: "res/GinaArp.svg";
