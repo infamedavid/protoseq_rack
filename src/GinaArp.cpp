@@ -110,6 +110,7 @@ struct GinaArp : Module {
 	int noteIndex = 0;
 	float heldVolts = 0.0f;
 	bool lastGateHigh = false;
+	RangeMode rangeMode = RangeMode::UnipolarUp;
 
 	GinaArp() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -215,7 +216,8 @@ struct GinaArp : Module {
 			effectiveODTS,
 			arpLen,
 			effectiveSeed,
-			noteIndex
+			noteIndex,
+			rangeMode
 		};
 
 		const int midiOut = shouldForcePivot(noteIndex, arpLen) ? pivotMidi : core.generateMidiNote(ctx);
@@ -228,6 +230,7 @@ struct GinaArp : Module {
 		json_t* rootJ = json_object();
 		json_object_set_new(rootJ, "keyRootSemitone", json_integer(keyRootSemitone));
 		json_object_set_new(rootJ, "mode", json_integer(static_cast<int>(mode)));
+		json_object_set_new(rootJ, "rangeMode", json_string(rangeMode == RangeMode::Bipolar ? "bipolar" : "unipolar_up"));
 		return rootJ;
 	}
 
@@ -243,6 +246,14 @@ struct GinaArp : Module {
 			const int modeCount = static_cast<int>(Mode::Hirojoshi) + 1;
 			const int clamped = clampValue(rawMode, 0, modeCount - 1);
 			mode = static_cast<Mode>(clamped);
+		}
+		json_t* rangeModeJ = json_object_get(rootJ, "rangeMode");
+		rangeMode = RangeMode::UnipolarUp;
+		if (json_is_string(rangeModeJ)) {
+			const char* rawRangeMode = json_string_value(rangeModeJ);
+			if (rawRangeMode && std::string(rawRangeMode) == "bipolar") {
+				rangeMode = RangeMode::Bipolar;
+			}
 		}
 	}
 };
@@ -363,6 +374,25 @@ struct GinaArpWidget : ModuleWidget {
 
 			addOutput(createOutputCentered<GinaJack>(mockupPx(306.93f, 863.56f), module, GinaArp::VOCT_OUTPUT));
 			addOutput(createOutputCentered<GinaJack>(mockupPx(418.19f, 863.56f), module, GinaArp::GATE_OUTPUT));
+	}
+
+	void appendContextMenu(Menu* menu) override {
+		GinaArp* ginaModule = dynamic_cast<GinaArp*>(module);
+		assert(menu);
+		menu->addChild(new MenuSeparator());
+		MenuLabel* settingsLabel = new MenuLabel();
+		settingsLabel->text = "Settings";
+		menu->addChild(settingsLabel);
+		MenuLabel* rangeLabel = new MenuLabel();
+		rangeLabel->text = "Range Mode";
+		menu->addChild(rangeLabel);
+
+		menu->addChild(createCheckMenuItem("Unipolar Up", "",
+			[ginaModule]() { return ginaModule && ginaModule->rangeMode == RangeMode::UnipolarUp; },
+			[ginaModule]() { if (ginaModule) ginaModule->rangeMode = RangeMode::UnipolarUp; }));
+		menu->addChild(createCheckMenuItem("Bipolar", "",
+			[ginaModule]() { return ginaModule && ginaModule->rangeMode == RangeMode::Bipolar; },
+			[ginaModule]() { if (ginaModule) ginaModule->rangeMode = RangeMode::Bipolar; }));
 	}
 };
 

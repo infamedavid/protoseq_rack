@@ -63,22 +63,47 @@ int main() {
 
     // 4) RAW pivot tests
     assert(core.resolvePivotMidi(midiToVoltage(61), 0, Mode::Major, PivotInputMode::Raw) == 61);
-    GinaArpContext rawCtx{0, Mode::Major, 61, 0.3f, 0.0f, 4, 0.4f, 1};
+    GinaArpContext rawCtx{0, Mode::Major, 61, 0.3f, 0.0f, 4, 0.4f, 1, RangeMode::Bipolar};
     for (const auto& c : core.generateCandidates(rawCtx)) {
         if (!c.oddity) assert(pitchClassInMode(0, Mode::Major, c.midiNote));
     }
 
+    // 5) RANGE mode behavior
+    GinaArpContext uni{0, Mode::Major, 60, 0.5f, 0.0f, 4, 0.2f, 1, RangeMode::UnipolarUp};
+    auto uniCandidates = tonalOnly(core.generateCandidates(uni));
+    bool uniAbovePivot = false;
+    for (const auto& c : uniCandidates) {
+        assert(c.midiNote >= 60);
+        if (c.midiNote > 60) uniAbovePivot = true;
+    }
+    assert(uniAbovePivot);
+
+    GinaArpContext bi{0, Mode::Major, 60, 0.5f, 0.0f, 4, 0.2f, 1, RangeMode::Bipolar};
+    auto biCandidates = tonalOnly(core.generateCandidates(bi));
+    bool biBelowPivot = false;
+    bool biAbovePivot = false;
+    for (const auto& c : biCandidates) {
+        if (c.midiNote < 60) biBelowPivot = true;
+        if (c.midiNote > 60) biAbovePivot = true;
+    }
+    assert(biBelowPivot);
+    assert(biAbovePivot);
+
+    GinaArpContext r0uni{0, Mode::Major, 60, 0.0f, 0.0f, 4, 0.2f, 1, RangeMode::UnipolarUp};
+    auto c0uni = core.generateCandidates(r0uni);
+    for (const auto& c : tonalOnly(c0uni)) assert(c.midiNote == 60);
+
     // 5) RANGE mapping and clamp
-    GinaArpContext r0{0, Mode::Major, 60, 0.0f, 0.0f, 4, 0.2f, 1};
+    GinaArpContext r0{0, Mode::Major, 60, 0.0f, 0.0f, 4, 0.2f, 1, RangeMode::Bipolar};
     auto c0 = core.generateCandidates(r0);
     for (const auto& c : tonalOnly(c0)) assert(c.midiNote >= 60 && c.midiNote <= 60);
-    GinaArpContext r05{0, Mode::Major, 60, 0.5f, 0.0f, 4, 0.2f, 1};
+    GinaArpContext r05{0, Mode::Major, 60, 0.5f, 0.0f, 4, 0.2f, 1, RangeMode::Bipolar};
     auto c05 = core.generateCandidates(r05);
     for (const auto& c : tonalOnly(c05)) assert(c.midiNote >= 36 && c.midiNote <= 84);
-    GinaArpContext r1{0, Mode::Major, 60, 1.0f, 0.0f, 4, 0.2f, 1};
+    GinaArpContext r1{0, Mode::Major, 60, 1.0f, 0.0f, 4, 0.2f, 1, RangeMode::Bipolar};
     auto c1 = core.generateCandidates(r1);
     for (const auto& c : tonalOnly(c1)) assert(c.midiNote >= 12 && c.midiNote <= 108);
-    GinaArpContext rClamp{0, Mode::Major, 60, 5.0f, 0.0f, 4, 0.2f, 1};
+    GinaArpContext rClamp{0, Mode::Major, 60, 5.0f, 0.0f, 4, 0.2f, 1, RangeMode::Bipolar};
     auto cc = core.generateCandidates(rClamp);
     for (const auto& c : tonalOnly(cc)) assert(c.midiNote >= 12 && c.midiNote <= 108);
 
@@ -91,11 +116,11 @@ int main() {
     assert(shouldForcePivot(1, 1));
 
     // 7) ODTS
-    GinaArpContext od0{0, Mode::Major, 84, 0.4f, 0.0f, 4, 0.2f, 1};
+    GinaArpContext od0{0, Mode::Major, 84, 0.4f, 0.0f, 4, 0.2f, 1, RangeMode::Bipolar};
     auto noOdd = core.generateCandidates(od0);
     for (const auto& c : noOdd) assert(!c.oddity);
 
-    GinaArpContext od1hi{0, Mode::Major, 96, 0.5f, 1.0f, 4, 0.2f, 1};
+    GinaArpContext od1hi{0, Mode::Major, 96, 0.5f, 1.0f, 4, 0.2f, 1, RangeMode::Bipolar};
     auto oddHi = core.generateCandidates(od1hi);
     bool hasOdd = false;
     float tonalCeil = 0.f;
@@ -109,7 +134,7 @@ int main() {
     }
     assert(hasOdd);
 
-    GinaArpContext od1low{0, Mode::Major, 72, 0.2f, 1.0f, 4, 0.2f, 1};
+    GinaArpContext od1low{0, Mode::Major, 72, 0.2f, 1.0f, 4, 0.2f, 1, RangeMode::Bipolar};
     auto oddLow = core.generateCandidates(od1low);
     for (const auto& c : oddLow) assert(!c.oddity);
 
@@ -139,22 +164,22 @@ int main() {
     assert(approx(aSharp7, expectedOddWeight(106, 4, 5), 1e-4f));
 
     // ODTS must not change tonal weights
-    GinaArpContext tonalA{0, Mode::Major, 84, 0.4f, 0.0f, 4, 0.2f, 1};
-    GinaArpContext tonalB{0, Mode::Major, 84, 0.4f, 1.0f, 4, 0.2f, 1};
+    GinaArpContext tonalA{0, Mode::Major, 84, 0.4f, 0.0f, 4, 0.2f, 1, RangeMode::Bipolar};
+    GinaArpContext tonalB{0, Mode::Major, 84, 0.4f, 1.0f, 4, 0.2f, 1, RangeMode::Bipolar};
     auto ta = tonalOnly(core.generateCandidates(tonalA));
     auto tb = tonalOnly(core.generateCandidates(tonalB));
     assert(ta.size() == tb.size());
     for (size_t i=0;i<ta.size();++i) { assert(ta[i].midiNote == tb[i].midiNote); assert(approx(ta[i].weight, tb[i].weight)); }
 
     // 8) Pentatonic ODTS
-    GinaArpContext pent{0, Mode::MajorPentatonic, 96, 0.5f, 1.0f, 4, 0.2f, 1};
+    GinaArpContext pent{0, Mode::MajorPentatonic, 96, 0.5f, 1.0f, 4, 0.2f, 1, RangeMode::Bipolar};
     auto pentC = core.generateCandidates(pent);
     std::set<int> oddPC;
     for (auto& c : pentC) if (c.oddity) oddPC.insert((c.midiNote%12+12)%12);
     for (int pc : std::vector<int>{1,3,5,6,8,10,11}) assert(oddPC.count(pc) > 0);
 
     // 9) Locrian strictness
-    GinaArpContext loc{0, Mode::Locrian, 60, 0.8f, 0.0f, 4, 0.2f, 1};
+    GinaArpContext loc{0, Mode::Locrian, 60, 0.8f, 0.0f, 4, 0.2f, 1, RangeMode::Bipolar};
     auto locC = core.generateCandidates(loc);
     bool hasPerfect5 = false, hasFlat5 = false;
     for (auto& c : locC) if (!c.oddity) { if (c.intervalClass==7) hasPerfect5=true; if (c.intervalClass==6) hasFlat5=true; }
@@ -170,7 +195,7 @@ int main() {
     assert(toSeedBucket(0.456f) == 456);
     assert(toSeedBucket(1.0f) == 1000);
 
-    GinaArpContext sd{0, Mode::Major, 72, 0.4f, 0.0f, 4, 1.0f, 3};
+    GinaArpContext sd{0, Mode::Major, 72, 0.4f, 0.0f, 4, 1.0f, 3, RangeMode::Bipolar};
 
     // Any seedControl > 0 must be deterministic for the same context.
     GinaArpContext sd001 = sd;
@@ -239,7 +264,7 @@ int main() {
     assert(stableA == stableB);
 
     // Mutable mode (seedControl<=0) should not collapse to deterministic repeats.
-    GinaArpContext mut{0, Mode::Major, 72, 1.0f, 0.0f, 4, 0.0f, 9};
+    GinaArpContext mut{0, Mode::Major, 72, 1.0f, 0.0f, 4, 0.0f, 9, RangeMode::Bipolar};
     const int mutableTrials = 32;
     int mutableFirst = core.generateMidiNote(mut);
     bool mutableVaries = false;
@@ -252,7 +277,7 @@ int main() {
     assert(mutableVaries);
 
     // 11) fallback
-    GinaArpContext fb{0, Mode::Major, 1, 0.0f, 0.0f, 4, 0.2f, 1};
+    GinaArpContext fb{0, Mode::Major, 1, 0.0f, 0.0f, 4, 0.2f, 1, RangeMode::Bipolar};
     auto fbc = core.generateCandidates(fb);
     assert(!fbc.empty());
 
