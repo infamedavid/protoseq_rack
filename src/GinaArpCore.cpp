@@ -255,14 +255,15 @@ int GinaArpCore::generateMidiNote(const GinaArpContext& ctx) {
         weighted.push_back({i, std::max(0.01f, candidates[i].weight)});
     }
 
+    const float seedFloat = clamp01(ctx.seedControl);
     const int seedBucket = clampValue(
-        static_cast<int>(std::lround(ctx.seedControl)),
-        0,
-        100
+        static_cast<int>(std::lround(seedFloat * 1000.0f)),
+        1,
+        1000
     );
 
     std::size_t pick = 0;
-    if (seedBucket <= 0) {
+    if (seedFloat <= 0.0f) {
         pick = chooseWeightedIndexMutable(weighted);
     } else {
         const int rangeBucket = clampValue(
@@ -270,9 +271,11 @@ int GinaArpCore::generateMidiNote(const GinaArpContext& ctx) {
             0,
             1000
         );
+        const int safeArpLen = std::max(1, ctx.arpLen);
+        const int phrasePosition = ctx.noteIndex % safeArpLen;
         const auto stableSeed = buildDeterministicSeed(
             seedBucket,
-            ctx.noteIndex,
+            phrasePosition,
             pivotMidi,
             mod12(ctx.keyRootSemitone),
             static_cast<int>(ctx.mode),
