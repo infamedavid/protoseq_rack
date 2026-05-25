@@ -12,11 +12,19 @@
   "modules": [
     {
       "slug": "GinasARP",
-      "name": "Gina’s ARP",
-      "description": "Voltage-controlled generative arpeggio/sequencer module based on the Gina’s ARP step engine from Protoseq",
+      "name": "Gina\u2019s ARP",
+      "description": "Voltage-controlled generative arpeggio/sequencer module based on the Gina\u2019s ARP step engine from Protoseq",
       "tags": [
         "Arpeggiator",
         "Sequencer"
+      ]
+    },
+    {
+      "slug": "ProtoseqBlank",
+      "name": "Protoseq Blank",
+      "description": "Blank decorative 5 HP faceplate module",
+      "tags": [
+        "Blank"
       ]
     }
   ]
