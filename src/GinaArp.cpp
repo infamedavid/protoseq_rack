@@ -229,7 +229,7 @@ struct GinaArp : Module {
 		json_t* rootJ = json_object();
 		json_object_set_new(rootJ, "keyRootSemitone", json_integer(keyRootSemitone));
 		json_object_set_new(rootJ, "mode", json_integer(static_cast<int>(mode)));
-		json_object_set_new(rootJ, "rangeMode", json_string(rangeMode == RangeMode::Bipolar ? "bipolar" : "unipolar_up"));
+		json_object_set_new(rootJ, "rangeMode", json_string(rangeMode == RangeMode::Bipolar ? "bipolar" : "unipolar"));
 		return rootJ;
 	}
 
@@ -250,8 +250,13 @@ struct GinaArp : Module {
 		rangeMode = RangeMode::UnipolarUp;
 		if (json_is_string(rangeModeJ)) {
 			const char* rawRangeMode = json_string_value(rangeModeJ);
-			if (rawRangeMode && std::string(rawRangeMode) == "bipolar") {
-				rangeMode = RangeMode::Bipolar;
+			if (rawRangeMode) {
+				const std::string rangeModeStr(rawRangeMode);
+				if (rangeModeStr == "bipolar") {
+					rangeMode = RangeMode::Bipolar;
+				} else if (rangeModeStr == "unipolar" || rangeModeStr == "unipolar_up") {
+					rangeMode = RangeMode::UnipolarUp;
+				}
 			}
 		}
 	}
@@ -386,7 +391,7 @@ struct GinaArpWidget : ModuleWidget {
 		rangeLabel->text = "Range Mode";
 		menu->addChild(rangeLabel);
 
-		menu->addChild(createCheckMenuItem("Unipolar Up", "",
+		menu->addChild(createCheckMenuItem("Unipolar", "",
 			[ginaModule]() { return ginaModule && ginaModule->rangeMode == RangeMode::UnipolarUp; },
 			[ginaModule]() { if (ginaModule) ginaModule->rangeMode = RangeMode::UnipolarUp; }));
 		menu->addChild(createCheckMenuItem("Bipolar", "",
