@@ -61,7 +61,7 @@ https://github.com/infamedavid/GinasARP
 ### ARP LEN
 - ARP LEN range is 2..16.
 - ARP LEN controls return-to-pivot cadence.
-- ARP LEN does not control gate length.
+- Gate  len is controld for the incoming clock
 
 ### Clock/Gate behavior
 - GATE IN keeps the phrase alive.
@@ -69,7 +69,6 @@ https://github.com/infamedavid/GinasARP
 - GATE OUT is 10V while CLOCK IN and GATE IN are both high, otherwise 0V.
 - GATE OUT follows CLOCK pulse duration while GATE IN is high, with normalized 10V amplitude.
 - V/OCT OUT holds last pitch when GATE IN is low.
-- There is no internal gate length control.
 
 ## Build/Test
 - `make test-core`
