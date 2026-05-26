@@ -70,6 +70,24 @@ https://github.com/infamedavid/GinasARP
 - GATE OUT follows CLOCK pulse duration while GATE IN is high, with normalized 10V amplitude.
 - V/OCT OUT holds last pitch when GATE IN is low.
 
+## Gina’s Expander
+
+Gina’s Expander is a 3 HP expander for Gina’s ARP and should be placed directly to the right of it.
+
+### Inputs
+- SEED
+- ALEN
+
+### Behavior summary
+- Both inputs are stepped/quantized.
+- SEED CV selects mutable/random behavior or deterministic seed buckets.
+- ALEN CV selects return-to-pivot length from 2 to 16.
+- A patched expander input overrides the matching Gina’s ARP control.
+- An unpatched expander input leaves the Gina’s ARP knob active.
+- No attenuators.
+- No outputs.
+- No standalone note/gate generation.
+
 ## Build/Test
 - `make test-core`
 - `make` (if Rack SDK is installed/configured)
