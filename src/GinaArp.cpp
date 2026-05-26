@@ -1,5 +1,6 @@
 #include "plugin.hpp"
 #include "GinaArpCore.hpp"
+#include "GinasExpanderMessage.hpp"
 #include <limits>
 
 using namespace protoseq;
@@ -110,6 +111,7 @@ struct GinaArp : Module {
 	float heldVolts = 0.0f;
 	bool lastGateHigh = false;
 	RangeMode rangeMode = RangeMode::UnipolarUp;
+	GinasExpanderMessage rightMessages[2];
 
 	GinaArp() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -137,6 +139,9 @@ struct GinaArp : Module {
 
 		configOutput(VOCT_OUTPUT, "V/OCT OUT (generated Gina’s ARP pitch)");
 		configOutput(GATE_OUTPUT, "GATE OUT (10V while CLOCK and GATE are high; no internal gate length)");
+
+		rightExpander.producerMessage = &rightMessages[0];
+		rightExpander.consumerMessage = &rightMessages[1];
 	}
 
 	void process(const ProcessArgs& args) override {
