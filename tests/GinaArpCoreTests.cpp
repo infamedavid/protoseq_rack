@@ -130,8 +130,14 @@ int main() {
     assert(shouldForcePivot(16, 16));
     assert(shouldForcePivot(32, 16));
 
-    assert(shouldForcePivot(16, 99)); // above range clamps to 16
-    assert(!shouldForcePivot(15, 99));
+    assert(shouldForcePivot(64, 64));
+    assert(!shouldForcePivot(63, 64));
+
+    assert(shouldForcePivot(128, 128));
+    assert(!shouldForcePivot(127, 128));
+
+    assert(shouldForcePivot(128, 999)); // above range clamps to 128
+    assert(!shouldForcePivot(127, 999));
 
     // 7) ODTS
     GinaArpContext od0{0, Mode::Major, 84, 0.4f, 0.0f, 4, 0.2f, 1, RangeMode::Bipolar};
@@ -205,13 +211,17 @@ int main() {
     assert(hasFlat5);
 
     // 10) Seed tests
-    // Seed mapping: <=0.0 = mutable, >0.0 mapped to deterministic buckets 1..1000.
-    const auto toSeedBucket = [](float seedControl)->int {
-        return std::clamp(static_cast<int>(std::lround(seedControl * 1000.0f)), 1, 1000);
+    // Seed mapping: <=0.0 = mutable, >0.0 mapped to deterministic buckets 1..2000.
+    const auto clampInt = [](int value, int low, int high)->int {
+        return value < low ? low : (value > high ? high : value);
+    };
+    const auto toSeedBucket = [&](float seedControl)->int {
+        return clampInt(static_cast<int>(std::lround(seedControl * 1000.0f)), 1, 2000);
     };
     assert(toSeedBucket(0.001f) == 1);
     assert(toSeedBucket(0.456f) == 456);
     assert(toSeedBucket(1.0f) == 1000);
+    assert(toSeedBucket(2.0f) == 2000);
 
     GinaArpContext sd{0, Mode::Major, 72, 0.4f, 0.0f, 4, 1.0f, 3, RangeMode::Bipolar};
 
@@ -274,9 +284,9 @@ int main() {
 
     // Seed identity includes fixedSeed bucket, phrase position, pivot, key, mode, and range bucket.
     const int seedBucket = toSeedBucket(0.5f);
-    const int safeArpLen = std::clamp(sd.arpLen, 2, 16);
+    const int safeArpLen = clampInt(sd.arpLen, 2, 128);
     const int phrasePosition = sd.noteIndex % safeArpLen;
-    const int rangeBucket = std::clamp(static_cast<int>(std::lround(clamp01(sd.effectiveRange) * 1000.0f)), 0, 1000);
+    const int rangeBucket = clampInt(static_cast<int>(std::lround(clamp01(sd.effectiveRange) * 1000.0f)), 0, 1000);
     const std::uint64_t stableA = buildDeterministicSeed(seedBucket, phrasePosition, sd.pivotMidi, sd.keyRootSemitone, static_cast<int>(sd.mode), rangeBucket);
     const std::uint64_t stableB = buildDeterministicSeed(seedBucket, phrasePosition, sd.pivotMidi, sd.keyRootSemitone, static_cast<int>(sd.mode), rangeBucket);
     assert(stableA == stableB);
@@ -305,14 +315,17 @@ int main() {
     assert(quantizeGinasExpanderSeedCv(0.0f) == 0);
     assert(quantizeGinasExpanderSeedCv(5.0f) == 500);
     assert(quantizeGinasExpanderSeedCv(10.0f) == 1000);
-    assert(quantizeGinasExpanderSeedCv(12.0f) == 1000);
+    assert(quantizeGinasExpanderSeedCv(12.0f) == 1200);
+    assert(quantizeGinasExpanderSeedCv(20.0f) == 2000);
+    assert(quantizeGinasExpanderSeedCv(24.0f) == 2000);
 
     assert(quantizeGinasExpanderAlenCv(-1.0f) == 2);
     assert(quantizeGinasExpanderAlenCv(0.0f) == 2);
-    assert(quantizeGinasExpanderAlenCv(10.0f) == 16);
-    assert(quantizeGinasExpanderAlenCv(12.0f) == 16);
-    assert(quantizeGinasExpanderAlenCv(3.0f) == 6);
-    assert(quantizeGinasExpanderAlenCv(7.0f) == 12);
+    assert(quantizeGinasExpanderAlenCv(5.0f) == 33);
+    assert(quantizeGinasExpanderAlenCv(10.0f) == 64);
+    assert(quantizeGinasExpanderAlenCv(15.0f) == 96);
+    assert(quantizeGinasExpanderAlenCv(20.0f) == 128);
+    assert(quantizeGinasExpanderAlenCv(24.0f) == 128);
 
     std::cout << "All GinaArp core tests passed\n";
     return 0;
