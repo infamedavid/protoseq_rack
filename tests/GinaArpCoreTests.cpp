@@ -29,6 +29,11 @@ std::vector<GinaCandidate> tonalOnly(const std::vector<GinaCandidate>& in) {
 
 int main() {
     GinaArpCore core;
+    const auto normPc = [](int midi)->int { return ((midi % 12) + 12) % 12; };
+
+    // 0) includePivot defaults off
+    GinaArpContext defaultCtx;
+    assert(defaultCtx.includePivot == false);
 
     // 1) Scale interval tests
     const std::map<Mode, std::vector<int>> expected = {
@@ -308,6 +313,51 @@ int main() {
     GinaArpContext fb{0, Mode::Major, 1, 0.0f, 0.0f, 4, 0.2f, 1, RangeMode::Bipolar};
     auto fbc = core.generateCandidates(fb);
     assert(!fbc.empty());
+
+    // 11b) Include Pivot filtering applies in generateMidiNote(), not generateCandidates()
+    GinaArpContext rawPoolCtx{0, Mode::Major, 60, 0.5f, 1.0f, 4, 1.0f, 1, RangeMode::Bipolar, false};
+    auto rawPool = core.generateCandidates(rawPoolCtx);
+    bool rawPoolHasPivotPc = false;
+    for (const auto& c : rawPool) {
+        if (normPc(c.midiNote) == normPc(rawPoolCtx.pivotMidi)) {
+            rawPoolHasPivotPc = true;
+            break;
+        }
+    }
+    assert(rawPoolHasPivotPc);
+
+    // includePivot=false excludes pivot pitch class for non-forced notes when alternatives exist.
+    GinaArpContext filteredCtx = rawPoolCtx;
+    filteredCtx.includePivot = false;
+    filteredCtx.noteIndex = 1;
+    const int filteredMidi = core.generateMidiNote(filteredCtx);
+    assert(normPc(filteredMidi) != normPc(filteredCtx.pivotMidi));
+
+    // Forced pivot returns bypass filtering and still output pivot.
+    filteredCtx.noteIndex = 4;
+    assert(shouldForcePivot(filteredCtx.noteIndex, filteredCtx.arpLen));
+    assert(core.generateMidiNote(filteredCtx) == filteredCtx.pivotMidi);
+
+    // includePivot=true restores legacy behavior; pivot pitch class can be selected.
+    GinaArpContext legacyCtx = rawPoolCtx;
+    legacyCtx.includePivot = true;
+    legacyCtx.noteIndex = 1;
+    legacyCtx.seedControl = 0.003f;
+    bool selectedPivotPc = false;
+    for (int seed = 1; seed <= 2000; ++seed) {
+        legacyCtx.seedControl = static_cast<float>(seed) / 1000.0f;
+        const int midi = core.generateMidiNote(legacyCtx);
+        if (normPc(midi) == normPc(legacyCtx.pivotMidi)) {
+            selectedPivotPc = true;
+            break;
+        }
+    }
+    assert(selectedPivotPc);
+
+    // Fallback when filter empties list (e.g., RANGE=0 only pivot exists) should still return pivot.
+    GinaArpContext rangeZeroFallback{0, Mode::Major, 60, 0.0f, 0.0f, 4, 1.0f, 1, RangeMode::Bipolar, false};
+    assert(!shouldForcePivot(rangeZeroFallback.noteIndex, rangeZeroFallback.arpLen));
+    assert(core.generateMidiNote(rangeZeroFallback) == 60);
 
 
     // 12) Gina's Expander CV quantization helpers

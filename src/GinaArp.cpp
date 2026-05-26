@@ -111,6 +111,7 @@ struct GinaArp : Module {
 	float heldVolts = 0.0f;
 	bool lastGateHigh = false;
 	RangeMode rangeMode = RangeMode::UnipolarUp;
+	bool includePivot = false;
 	GinasExpanderMessage rightMessages[2];
 
 	GinaArp() {
@@ -228,6 +229,7 @@ struct GinaArp : Module {
 		ctx.seedControl = effectiveSeed;
 		ctx.noteIndex = noteIndex;
 		ctx.rangeMode = rangeMode;
+		ctx.includePivot = includePivot;
 
 		const int midiOut = core.generateMidiNote(ctx);
 		heldVolts = midiToVoltage(midiOut);
@@ -240,6 +242,7 @@ struct GinaArp : Module {
 		json_object_set_new(rootJ, "keyRootSemitone", json_integer(keyRootSemitone));
 		json_object_set_new(rootJ, "mode", json_integer(static_cast<int>(mode)));
 		json_object_set_new(rootJ, "rangeMode", json_string(rangeMode == RangeMode::Bipolar ? "bipolar" : "unipolar"));
+		json_object_set_new(rootJ, "includePivot", json_boolean(includePivot));
 		return rootJ;
 	}
 
@@ -269,6 +272,8 @@ struct GinaArp : Module {
 				}
 			}
 		}
+		json_t* includePivotJ = json_object_get(rootJ, "includePivot");
+		includePivot = json_is_true(includePivotJ);
 	}
 };
 
@@ -407,6 +412,9 @@ struct GinaArpWidget : ModuleWidget {
 		menu->addChild(createCheckMenuItem("Bipolar", "",
 			[ginaModule]() { return ginaModule && ginaModule->rangeMode == RangeMode::Bipolar; },
 			[ginaModule]() { if (ginaModule) ginaModule->rangeMode = RangeMode::Bipolar; }));
+		menu->addChild(createCheckMenuItem("Include Pivot", "",
+			[ginaModule]() { return ginaModule && ginaModule->includePivot; },
+			[ginaModule]() { if (ginaModule) ginaModule->includePivot = !ginaModule->includePivot; }));
 	}
 };
 

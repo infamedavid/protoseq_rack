@@ -44,6 +44,29 @@ struct GinaArpContext {
     float seedControl;
     int noteIndex;
     RangeMode rangeMode = RangeMode::UnipolarUp;
+    bool includePivot = false;
+
+    GinaArpContext(
+        int keyRootSemitone = 0,
+        Mode mode = Mode::Major,
+        int pivotMidi = 60,
+        float effectiveRange = 0.0f,
+        float effectiveODTS = 0.0f,
+        int arpLen = 4,
+        float seedControl = 0.0f,
+        int noteIndex = 0,
+        RangeMode rangeMode = RangeMode::UnipolarUp,
+        bool includePivot = false
+    ) : keyRootSemitone(keyRootSemitone),
+        mode(mode),
+        pivotMidi(pivotMidi),
+        effectiveRange(effectiveRange),
+        effectiveODTS(effectiveODTS),
+        arpLen(arpLen),
+        seedControl(seedControl),
+        noteIndex(noteIndex),
+        rangeMode(rangeMode),
+        includePivot(includePivot) {}
 };
 
 int voltageToNearestMidi(float volts);
