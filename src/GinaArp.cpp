@@ -214,7 +214,7 @@ struct GinaArp : Module {
 		ctx.noteIndex = noteIndex;
 		ctx.rangeMode = rangeMode;
 
-		const int midiOut = shouldForcePivot(noteIndex, arpLen) ? pivotMidi : core.generateMidiNote(ctx);
+		const int midiOut = core.generateMidiNote(ctx);
 		heldVolts = midiToVoltage(midiOut);
 		outputs[VOCT_OUTPUT].setVoltage(heldVolts);
 		++noteIndex;
@@ -375,6 +375,7 @@ struct GinaArpWidget : ModuleWidget {
 	}
 
 	void appendContextMenu(Menu* menu) override {
+		if (!menu) return;
 		GinaArp* ginaModule = dynamic_cast<GinaArp*>(module);
 		assert(menu);
 		menu->addChild(new MenuSeparator());
