@@ -1,6 +1,7 @@
 #include "../src/GinaArpCore.hpp"
 #include "../src/GinaArpRandom.hpp"
 #include "../src/GinaArpScales.hpp"
+#include "../src/GinasExpanderQuant.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -297,6 +298,21 @@ int main() {
     GinaArpContext fb{0, Mode::Major, 1, 0.0f, 0.0f, 4, 0.2f, 1, RangeMode::Bipolar};
     auto fbc = core.generateCandidates(fb);
     assert(!fbc.empty());
+
+
+    // 12) Gina's Expander CV quantization helpers
+    assert(quantizeGinasExpanderSeedCv(-1.0f) == 0);
+    assert(quantizeGinasExpanderSeedCv(0.0f) == 0);
+    assert(quantizeGinasExpanderSeedCv(5.0f) == 500);
+    assert(quantizeGinasExpanderSeedCv(10.0f) == 1000);
+    assert(quantizeGinasExpanderSeedCv(12.0f) == 1000);
+
+    assert(quantizeGinasExpanderAlenCv(-1.0f) == 2);
+    assert(quantizeGinasExpanderAlenCv(0.0f) == 2);
+    assert(quantizeGinasExpanderAlenCv(10.0f) == 16);
+    assert(quantizeGinasExpanderAlenCv(12.0f) == 16);
+    assert(quantizeGinasExpanderAlenCv(3.0f) == 6);
+    assert(quantizeGinasExpanderAlenCv(7.0f) == 12);
 
     std::cout << "All GinaArp core tests passed\n";
     return 0;

@@ -12,8 +12,8 @@
   "modules": [
     {
       "slug": "GinasARP",
-      "name": "Gina\u2019s ARP",
-      "description": "Voltage-controlled generative arpeggio/sequencer module based on the Gina\u2019s ARP step engine from Protoseq",
+      "name": "Gina’s ARP",
+      "description": "Voltage-controlled generative arpeggio/sequencer module based on the Gina’s ARP step engine from Protoseq",
       "tags": [
         "Arpeggiator",
         "Sequencer"
@@ -25,6 +25,15 @@
       "description": "Blank decorative 5 HP faceplate module",
       "tags": [
         "Blank"
+      ]
+    },
+    {
+      "slug": "GinasExpander",
+      "name": "Gina’s Expander",
+      "description": "CV expander for Gina’s ARP seed and arpeggio length control",
+      "tags": [
+        "Expander",
+        "Controller"
       ]
     }
   ]
