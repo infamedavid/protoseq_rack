@@ -204,10 +204,10 @@ struct GinaArp : Module {
 		if (rightExpander.module && rightExpander.module->model == modelGinasExpander && rightExpander.consumerMessage) {
 			auto* expanderMessage = static_cast<GinasExpanderMessage*>(rightExpander.consumerMessage);
 			if (expanderMessage->seedActive) {
-				effectiveSeed = clampValue(static_cast<float>(expanderMessage->seedBucket) / 1000.0f, 0.0f, 1.0f);
+				effectiveSeed = clampValue(static_cast<float>(expanderMessage->seedBucket) / 1000.0f, 0.0f, 2.0f);
 			}
 			if (expanderMessage->alenActive) {
-				arpLen = clampValue(expanderMessage->alen, 2, 16);
+				arpLen = clampValue(expanderMessage->alen, 2, 128);
 			}
 		}
 
