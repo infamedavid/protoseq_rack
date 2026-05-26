@@ -194,15 +194,25 @@ struct GinaArp : Module {
 
 		const float rangeCv = inputs[RANGE_CV_INPUT].isConnected() ? (inputs[RANGE_CV_INPUT].getVoltage() / 10.0f) * params[RANGE_ATTEN_PARAM].getValue() : 0.0f;
 		const float odtsCv = inputs[ODTS_CV_INPUT].isConnected() ? (inputs[ODTS_CV_INPUT].getVoltage() / 10.0f) * params[ODTS_ATTEN_PARAM].getValue() : 0.0f;
-		const float effectiveSeed = clampValue(
+		float effectiveSeed = clampValue(
 			params[SEED_PARAM].getValue(),
 			0.0f,
 			1.0f
 		);
+		int arpLen = static_cast<int>(std::round(clamp(params[ARP_LEN_PARAM].getValue(), 2.0f, 16.0f)));
+
+		if (rightExpander.module && rightExpander.module->model == modelGinasExpander && rightExpander.consumerMessage) {
+			auto* expanderMessage = static_cast<GinasExpanderMessage*>(rightExpander.consumerMessage);
+			if (expanderMessage->seedActive) {
+				effectiveSeed = clampValue(static_cast<float>(expanderMessage->seedBucket) / 1000.0f, 0.0f, 1.0f);
+			}
+			if (expanderMessage->alenActive) {
+				arpLen = clampValue(expanderMessage->alen, 2, 16);
+			}
+		}
 
 		const float effectiveRange = clamp(params[RANGE_PARAM].getValue() + rangeCv, 0.0f, 1.0f);
 		const float effectiveODTS = clamp(params[ODTS_PARAM].getValue() + odtsCv, 0.0f, 1.0f);
-		const int arpLen = static_cast<int>(std::round(clamp(params[ARP_LEN_PARAM].getValue(), 2.0f, 16.0f)));
 
 		const PivotInputMode pivotMode = params[PIVOT_MODE_PARAM].getValue() >= 0.5f ? PivotInputMode::Raw : PivotInputMode::Quantized;
 		const float vOctIn = inputs[VOCT_INPUT].getVoltage();
