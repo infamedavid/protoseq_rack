@@ -245,6 +245,7 @@ std::vector<GinaCandidate> GinaArpCore::generateCandidates(const GinaArpContext&
 
 int GinaArpCore::generateMidiNote(const GinaArpContext& ctx) {
     const int pivotMidi = clampMidi(ctx.pivotMidi);
+    const int pivotPitchClass = mod12(pivotMidi);
     if (shouldForcePivot(ctx.noteIndex, ctx.arpLen)) {
         return pivotMidi;
     }
@@ -254,10 +255,24 @@ int GinaArpCore::generateMidiNote(const GinaArpContext& ctx) {
         return pivotMidi;
     }
 
+    std::vector<GinaCandidate> filteredCandidates;
+    const std::vector<GinaCandidate>* selectionCandidates = &candidates;
+    if (!ctx.includePivot) {
+        filteredCandidates.reserve(candidates.size());
+        for (const auto& candidate : candidates) {
+            if (mod12(candidate.midiNote) != pivotPitchClass) {
+                filteredCandidates.push_back(candidate);
+            }
+        }
+        if (!filteredCandidates.empty()) {
+            selectionCandidates = &filteredCandidates;
+        }
+    }
+
     std::vector<WeightedIndex> weighted;
-    weighted.reserve(candidates.size());
-    for (std::size_t i = 0; i < candidates.size(); ++i) {
-        weighted.push_back({i, std::max(0.01f, candidates[i].weight)});
+    weighted.reserve(selectionCandidates->size());
+    for (std::size_t i = 0; i < selectionCandidates->size(); ++i) {
+        weighted.push_back({i, std::max(0.01f, (*selectionCandidates)[i].weight)});
     }
 
     const float seedFloat = clampValue(ctx.seedControl, 0.0f, 2.0f);
@@ -288,10 +303,10 @@ int GinaArpCore::generateMidiNote(const GinaArpContext& ctx) {
         pick = chooseWeightedIndexDeterministic(weighted, stableSeed);
     }
 
-    if (pick >= candidates.size()) {
+    if (pick >= selectionCandidates->size()) {
         return pivotMidi;
     }
-    return clampMidi(candidates[pick].midiNote);
+    return clampMidi((*selectionCandidates)[pick].midiNote);
 }
 
 } // namespace protoseq
