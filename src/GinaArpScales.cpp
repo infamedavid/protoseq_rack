@@ -2,7 +2,7 @@
 
 #include <array>
 #include <set>
-#include <stdexcept>
+#include <cassert>
 
 namespace protoseq {
 namespace {
@@ -62,7 +62,8 @@ const std::vector<int>& scaleIntervals(Mode mode) {
         case Mode::Hirojoshi: return hirojoshi;
     }
 
-    throw std::invalid_argument("Unknown mode");
+    assert(false && "Unknown mode");
+    return major;
 }
 
 bool pitchClassInMode(int keyRootSemitone, Mode mode, int midiNote) {
