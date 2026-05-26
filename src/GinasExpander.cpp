@@ -1,4 +1,8 @@
 #include "plugin.hpp"
+#include "GinasExpanderMessage.hpp"
+#include "GinasExpanderQuant.hpp"
+
+using namespace protoseq;
 
 struct GinasExpander : Module {
 	enum ParamId {
@@ -20,6 +24,25 @@ struct GinasExpander : Module {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configInput(SEED_INPUT, "SEED CV");
 		configInput(ALEN_INPUT, "ALEN CV");
+	}
+
+	void process(const ProcessArgs& args) override {
+		(void) args;
+		Module* leftModule = leftExpander.module;
+		if (!leftModule || leftModule->model != modelGinaArp) {
+			return;
+		}
+		if (!leftModule->rightExpander.producerMessage) {
+			return;
+		}
+
+		auto* message = static_cast<GinasExpanderMessage*>(leftModule->rightExpander.producerMessage);
+		message->seedActive = inputs[SEED_INPUT].isConnected();
+		message->seedBucket = quantizeGinasExpanderSeedCv(inputs[SEED_INPUT].getVoltage());
+		message->alenActive = inputs[ALEN_INPUT].isConnected();
+		message->alen = quantizeGinasExpanderAlenCv(inputs[ALEN_INPUT].getVoltage());
+
+		leftModule->rightExpander.messageFlipRequested = true;
 	}
 };
 
