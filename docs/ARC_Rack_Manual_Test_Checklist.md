@@ -1,6 +1,6 @@
 # ARC Rack Manual Test Checklist
 
-Use this checklist for ARC Phase 1 behavior that depends on VCV Rack runtime, UI widgets, and audio-rate output timing.
+Use this checklist for ARC behavior that depends on VCV Rack runtime, UI widgets, and audio-rate output timing.
 
 ## Phase 1: MAIN clock, transport, and BPM display
 
@@ -21,4 +21,18 @@ Use this checklist for ARC Phase 1 behavior that depends on VCV Rack runtime, UI
 - [ ] PW CV IN, when patched, replaces the PW knob for MAIN OUT pulse width control.
 - [ ] MAIN OUT is 10V while high and 0V while low.
 - [ ] PW leaves a visible low gap in MAIN OUT even when the PW knob or PW CV IN is at maximum.
-- [ ] ARC OUT remains low throughout Phase 1.
+
+## Phase 2: ARC OUT multiplier and gate length
+
+- [ ] ARPC index 0 (`1`) produces one ARC pulse per MAIN period.
+- [ ] ARPC index 1 (`1.5`) produces 3 ARC pulses over 2 MAIN periods.
+- [ ] ARPC index 3 (`2.5`) produces 5 ARC pulses over 2 MAIN periods.
+- [ ] ARPC index 5 (`3.5`) produces 7 ARC pulses over 2 MAIN periods.
+- [ ] ARPC index 20 (`32`) is reachable and produces 32 ARC pulses per MAIN period.
+- [ ] ARC phase does not reset on every MAIN pulse.
+- [ ] PLAY/STOP GATE IN rising resets ARC phase and starts from the beginning of the ARC cycle.
+- [ ] STOP forces ARC OUT low.
+- [ ] GLEN controls ARC OUT high duration without producing overlapping or stuck-high ARC gates.
+- [ ] GLEN CV IN, when patched, replaces the GLEN knob.
+- [ ] ARPC CV IN, when patched, replaces the ARPC knob and scans the snapped index range 0..20.
+- [ ] BAR and BAR CV IN advance as an ARC-event cycle foundation without audible random/seed behavior in this phase.

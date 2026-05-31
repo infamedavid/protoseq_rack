@@ -12,8 +12,9 @@ SOURCES += src/Arc.cpp
 DISTRIBUTABLES += res
 
 TEST_CORE_EXE := build/gina_core_tests
+TEST_ARC_EXE := build/arc_core_tests
 
-.PHONY: test-core
+.PHONY: test-core test-arc
 
 test-core:
 	@mkdir -p build
@@ -23,6 +24,13 @@ test-core:
 		-o $(TEST_CORE_EXE)
 	@$(TEST_CORE_EXE)
 
-ifneq ($(filter test-core,$(MAKECMDGOALS)),test-core)
+test-arc:
+	@mkdir -p build
+	$(CXX) -std=c++17 -Wall -Wextra -pedantic \
+		tests/ArcCoreTests.cpp \
+		-o $(TEST_ARC_EXE)
+	@$(TEST_ARC_EXE)
+
+ifeq ($(filter test-core test-arc,$(MAKECMDGOALS)),)
 include $(RACK_DIR)/plugin.mk
 endif
