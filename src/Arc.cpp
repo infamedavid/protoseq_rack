@@ -162,7 +162,7 @@ struct Arc : Module {
 		RRTC_CV_INPUT,
 		BRNL_CV_INPUT,
 		SEED_CV_INPUT,
-		PLAY_CV_INPUT,
+		PLAY_STOP_TOGGLE_INPUT,
 		STOP_CV_INPUT,
 		PLAY_STOP_GATE_INPUT,
 		NUM_INPUTS
@@ -178,8 +178,7 @@ struct Arc : Module {
 
 	dsp::SchmittTrigger playButtonTrigger;
 	dsp::SchmittTrigger stopButtonTrigger;
-	dsp::SchmittTrigger playCvTrigger;
-	dsp::SchmittTrigger stopCvTrigger;
+	dsp::SchmittTrigger playStopToggleTrigger;
 	dsp::SchmittTrigger playStopGateTrigger;
 	bool isPlaying = false;
 	bool lastPlayStopGateHigh = false;
@@ -258,8 +257,8 @@ struct Arc : Module {
 		configInput(RRTC_CV_INPUT, "RRTC CV IN - replaces RRTC knob with normalized 0..1V");
 		configInput(BRNL_CV_INPUT, "BRNL CV IN - replaces BRNL knob with normalized 0..1V skip probability");
 		configInput(SEED_CV_INPUT, "SEED CV IN - replaces SEED knob; 0 mutable, >0 fixed buckets 1..1000");
-		configInput(PLAY_CV_INPUT, "PLAY CV IN - rising edge starts clock");
-		configInput(STOP_CV_INPUT, "STOP CV IN - rising edge stops clock and resets internal cycle");
+		configInput(PLAY_STOP_TOGGLE_INPUT, "PLAY/STOP TOGGLE IN - rising edge toggles playback; falling edge does nothing");
+		configInput(STOP_CV_INPUT, "STOP CV IN - reserved; inactive until Phase 10B");
 		configInput(PLAY_STOP_GATE_INPUT, "PLAY/STOP GATE IN - rising edge resets and plays; falling edge stops");
 
 		configOutput(MAIN_OUTPUT, "MAIN OUT - Master clock/gate output");
@@ -574,10 +573,18 @@ struct Arc : Module {
 		const float effectiveBpm = getEffectiveBpm();
 		displayBpm = static_cast<int>(std::round(effectiveBpm));
 
-		if (playButtonTrigger.process(params[PLAY_PARAM].getValue()) || playCvTrigger.process(inputs[PLAY_CV_INPUT].getVoltage())) {
+		if (playButtonTrigger.process(params[PLAY_PARAM].getValue())) {
 			startPlayback(false);
 		}
-		if (stopButtonTrigger.process(params[STOP_PARAM].getValue()) || stopCvTrigger.process(inputs[STOP_CV_INPUT].getVoltage())) {
+		if (playStopToggleTrigger.process(inputs[PLAY_STOP_TOGGLE_INPUT].getVoltage())) {
+			if (isPlaying) {
+				stopPlayback(false);
+			}
+			else {
+				startPlayback(false);
+			}
+		}
+		if (stopButtonTrigger.process(params[STOP_PARAM].getValue())) {
 			stopPlayback(true);
 		}
 
@@ -699,7 +706,7 @@ struct ArcWidget : ModuleWidget {
 		addInput(createInputCentered<ArcJack>(arcMm(30.46f, 92.00f), module, Arc::BRNL_CV_INPUT));
 		addInput(createInputCentered<ArcJack>(arcMm(52.04f, 92.00f), module, Arc::SEED_CV_INPUT));
 
-		addInput(createInputCentered<ArcJack>(arcMm(8.88f, 112.82f), module, Arc::PLAY_CV_INPUT));
+		addInput(createInputCentered<ArcJack>(arcMm(8.88f, 112.82f), module, Arc::PLAY_STOP_TOGGLE_INPUT));
 		addInput(createInputCentered<ArcJack>(arcMm(19.67f, 112.82f), module, Arc::STOP_CV_INPUT));
 		addInput(createInputCentered<ArcJack>(arcMm(30.46f, 112.82f), module, Arc::PLAY_STOP_GATE_INPUT));
 

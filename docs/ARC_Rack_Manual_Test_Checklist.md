@@ -8,8 +8,10 @@ Use this checklist for ARC behavior that depends on VCV Rack runtime, UI widgets
 - [ ] Pressing PLAY starts MAIN OUT.
 - [ ] Pressing STOP stops MAIN OUT, forces MAIN OUT and ARC OUT low, and resets the next PLAY from the cycle start.
 - [ ] Pressing STOP while already stopped has no audible or phase-reset effect.
-- [ ] Sending a rising edge to PLAY CV IN starts MAIN OUT.
-- [ ] Sending a rising edge to STOP CV IN stops MAIN OUT, forces MAIN OUT and ARC OUT low, and resets the next PLAY from the cycle start.
+- [ ] Sending a rising edge to PLAY/STOP TOGGLE IN starts MAIN OUT when ARC is stopped.
+- [ ] Sending a second rising edge to PLAY/STOP TOGGLE IN stops MAIN OUT and ARC OUT.
+- [ ] Falling edges on PLAY/STOP TOGGLE IN do not change playback state.
+- [ ] STOP CV IN is physically present but reserved/inactive in Phase 10A.
 - [ ] PLAY/STOP GATE IN rising edge starts playback from the beginning of the MAIN cycle.
 - [ ] PLAY/STOP GATE IN falling edge stops playback and forces MAIN OUT and ARC OUT low.
 - [ ] MAIN CV IN, when patched, replaces the MAIN knob for BPM control.
@@ -107,9 +109,21 @@ Use this checklist for ARC behavior that depends on VCV Rack runtime, UI widgets
 - [ ] BAR CV IN and NRTC CV IN snap to their documented integer ranges.
 - [ ] SEED CV IN keeps 0 as mutable mode and maps values above 0 to fixed seed buckets 1..1000.
 - [ ] Parameter, input, and output tooltips clearly describe each ARC control and jack.
-- [ ] Bottom jack row remains PLAY CV IN, STOP CV IN, PLAY/STOP GATE IN, MAIN OUT, ARC OUT.
+- [ ] Bottom jack row remains PLAY/STOP TOGGLE IN, reserved STOP CV IN, PLAY/STOP GATE IN, MAIN OUT, ARC OUT.
 - [ ] No PAUSE, RESET, transport output, BRNL output, EOC output, external clock sync, or extra output appears in the UI or context menu.
 - [ ] Full patch behavior works with ARC MAIN OUT to Gina’s ARP GATE IN and ARC ARC OUT to Gina’s ARP CLOCK IN.
 - [ ] BRNL, RLEN, NRTC/RRTC, and SWNG/RSWN can be combined without stuck-high or overlapping ARC OUT gates.
 - [ ] Fixed SEED settings repeat the same rhythmic pattern by BAR, while SEED 0 remains mutable for active random processes.
 - [ ] STOP stress while ratchets or swung gates are pending forces MAIN OUT and ARC OUT low.
+
+
+## Phase 10A: PLAY/STOP toggle input
+
+- [ ] With ARC stopped, a rising edge at PLAY/STOP TOGGLE IN starts playback.
+- [ ] With ARC playing, a rising edge at PLAY/STOP TOGGLE IN stops playback and forces MAIN OUT and ARC OUT low.
+- [ ] Falling edges at PLAY/STOP TOGGLE IN do nothing.
+- [ ] STOP CV IN remains physically present but does not control transport in this phase.
+- [ ] PLAY/STOP GATE IN remains unchanged: rising edge resets the internal cycle and plays; falling edge stops.
+- [ ] PLAY button still starts playback.
+- [ ] STOP button still stops playback and resets the internal cycle.
+- [ ] No BAR OUT exists yet.
