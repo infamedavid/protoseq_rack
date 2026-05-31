@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdint>
 #include <iostream>
+#include <vector>
 
 using namespace protoseq;
 
@@ -124,6 +125,24 @@ int main() {
 	assert(arcRatchetGateActive(0.05, 0.6, 3, 0.01));
 	assert(!arcRatchetGateActive(0.195, 0.6, 3, 0.01));
 	assert(arcRatchetGateActive(0.21, 0.6, 3, 0.01));
+
+	assert(approx(static_cast<float>(arcSwingDelaySeconds(0.5, 0.0f)), 0.0f));
+	assert(approx(static_cast<float>(arcSwingDelaySeconds(0.5, 1.0f)), 0.25f));
+	assert(!arcShouldSwing(0.0f, 0.0));
+	assert(arcShouldSwing(1.0f, 0.999));
+	const bool fixedSwingA = arcShouldSwingDeterministic(321, 3, 8, 0.5f, ArcRandomChannelId::SWNG);
+	const bool fixedSwingB = arcShouldSwingDeterministic(321, 3, 8, 0.5f, ArcRandomChannelId::SWNG);
+	assert(fixedSwingA == fixedSwingB);
+	assert(arcUnitRandomFromSeed(buildArcSeed(321, 3, 8, ArcRandomChannelId::SWNG)) != arcUnitRandomFromSeed(buildArcSeed(321, 3, 8, ArcRandomChannelId::BRNL)));
+	const std::vector<ArcSwingScheduleEvent> noSwingSchedule = arcBuildSwingSchedule(4, 10.0, 0.5, 1.0f, 0.0f, 123);
+	assert(noSwingSchedule.size() == 5);
+	assert(approx(static_cast<float>(noSwingSchedule[0].start), 10.0f));
+	assert(approx(static_cast<float>(noSwingSchedule[4].start), 12.0f));
+	const std::vector<ArcSwingScheduleEvent> fullSwingSchedule = arcBuildSwingSchedule(4, 10.0, 0.5, 1.0f, 1.0f, 123);
+	assert(fullSwingSchedule.size() == 5);
+	assert(fullSwingSchedule[4].barStep == 0);
+	assert(approx(static_cast<float>(fullSwingSchedule[4].start), 12.25f));
+	assert(arcEffectiveGateDurationSeconds(fullSwingSchedule[3].start, fullSwingSchedule[4].start, 0.5, 0.01) <= (fullSwingSchedule[4].start - fullSwingSchedule[3].start));
 
 	std::cout << "All ARC core tests passed\n";
 	return 0;

@@ -6,6 +6,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <vector>
 
 namespace protoseq {
 
@@ -13,6 +14,13 @@ struct ArcMultiplier {
 	float label;
 	int numerator;
 	int denominator;
+};
+
+struct ArcSwingScheduleEvent {
+	int barStep;
+	double baseStart;
+	double start;
+	bool swung;
 };
 
 constexpr std::array<ArcMultiplier, 21> ARC_MULTIPLIERS{{
@@ -143,6 +151,42 @@ inline double arcUnitRandomFromSeed(std::uint64_t seed) {
 	seed *= 0x94d049bb133111ebULL;
 	seed ^= seed >> 31U;
 	return static_cast<double>(seed >> 11U) * (1.0 / 9007199254740992.0);
+}
+
+inline double arcSwingDelaySeconds(double stepDuration, float swingAmount) {
+	return std::max(stepDuration, 0.0) * 0.5 * static_cast<double>(arcClamp01(swingAmount));
+}
+
+inline bool arcShouldSwing(float swingProbability, double randomUnit) {
+	const float clampedProbability = arcClamp01(swingProbability);
+	if (clampedProbability <= 0.0f) {
+		return false;
+	}
+	if (clampedProbability >= 1.0f) {
+		return true;
+	}
+	return std::min(std::max(randomUnit, 0.0), 1.0) < static_cast<double>(clampedProbability);
+}
+
+inline bool arcShouldSwingDeterministic(int seedBucket, int barStep, int barLen, float swingProbability, ArcRandomChannelId channelId = ArcRandomChannelId::SWNG) {
+	return arcShouldSwing(swingProbability, arcUnitRandomFromSeed(buildArcSeed(seedBucket, barStep, barLen, channelId)));
+}
+
+inline double arcScheduledEventStartSeconds(double baseStart, double stepDuration, float swingAmount, bool swung) {
+	return baseStart + (swung ? arcSwingDelaySeconds(stepDuration, swingAmount) : 0.0);
+}
+
+inline std::vector<ArcSwingScheduleEvent> arcBuildSwingSchedule(int barLen, double firstBaseStart, double stepDuration, float swingAmount, float swingProbability, int seedBucket) {
+	const int clampedBarLen = arcBarLengthFromParam(static_cast<float>(barLen));
+	std::vector<ArcSwingScheduleEvent> schedule;
+	schedule.reserve(static_cast<std::size_t>(clampedBarLen + 1));
+	for (int i = 0; i <= clampedBarLen; ++i) {
+		const int step = i % clampedBarLen;
+		const double baseStart = firstBaseStart + static_cast<double>(i) * stepDuration;
+		const bool swung = arcClamp01(swingAmount) > 0.0f && arcShouldSwingDeterministic(seedBucket, step, clampedBarLen, swingProbability);
+		schedule.push_back({step, baseStart, arcScheduledEventStartSeconds(baseStart, stepDuration, swingAmount, swung), swung});
+	}
+	return schedule;
 }
 
 inline bool arcShouldSkipBernoulli(float skipProbability, double randomUnit) {

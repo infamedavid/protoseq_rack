@@ -84,3 +84,17 @@ Use this checklist for ARC behavior that depends on VCV Rack runtime, UI widgets
 - [ ] MAIN OUT is unaffected by NRTC/RRTC at all settings.
 - [ ] With SEED above 0, the same SEED, BAR, NRTC, and RRTC settings repeat the same ratchet positions by BAR.
 - [ ] With SEED at 0, RRTC above 0, and NRTC above 1, ratchet selection is mutable/irrepeating.
+
+## Phase 8: SWNG selective swing
+
+- [ ] SWNG at 0.0 produces no ARC timing delay even when RSWN is raised.
+- [ ] RSWN at 0.0 selects no ARC steps for swing even when SWNG is raised.
+- [ ] RSWN at 1.0 applies the fixed SWNG delay to every eligible ARC event.
+- [ ] With SEED above 0, the same SEED, BAR, SWNG, and RSWN settings repeat the same swung step positions by BAR.
+- [ ] With SEED at 0, RSWN above 0, and SWNG above 0, swung step selection is mutable/irrepeating.
+- [ ] A swung final BAR step does not overlap the first step of the next BAR.
+- [ ] The final step of a BAR clamps against the real swung or unswung start time of the BAR lookahead step.
+- [ ] RLEN plus SWNG does not create overlaps or stuck-high ARC OUT gates.
+- [ ] RATCH plus SWNG keeps ratchet subpulses inside the final effective gate duration.
+- [ ] BRNL-skipped ARC steps remain silent and do not emit swung gates or ratchets.
+- [ ] MAIN OUT is unaffected by SWNG/RSWN at all settings.

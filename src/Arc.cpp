@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <functional>
 #include <random>
+#include <vector>
 
 namespace {
 
@@ -209,6 +210,14 @@ struct Arc : Module {
 	int evaluatedRatchetBarLength = -1;
 	int evaluatedRatchetSelectedCount = -1;
 	float evaluatedRatchetProbability = -1.0f;
+	std::vector<protoseq::ArcSwingScheduleEvent> arcSwingSchedule;
+	int scheduledBarStartArcStepIndex = -1;
+	int scheduledBarLength = -1;
+	int scheduledSeedBucket = -1;
+	float scheduledSwingAmount = -1.0f;
+	float scheduledSwingProbability = -1.0f;
+	double scheduledArcStepDuration = -1.0;
+	double scheduledFirstBaseStartSeconds = 0.0;
 
 	Arc() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -325,6 +334,20 @@ struct Arc : Module {
 		return clamp01(rawRrtc);
 	}
 
+	float getEffectiveSwingAmount() const {
+		const float rawSwing = inputs[SWNG_CV_INPUT].isConnected()
+			? inputs[SWNG_CV_INPUT].getVoltage()
+			: params[SWNG_PARAM].getValue();
+		return clamp01(rawSwing);
+	}
+
+	float getEffectiveSwingProbability() const {
+		const float rawSwingProbability = inputs[RSWN_CV_INPUT].isConnected()
+			? inputs[RSWN_CV_INPUT].getVoltage()
+			: params[RSWN_PARAM].getValue();
+		return clamp01(rawSwingProbability);
+	}
+
 	void updateArcRandomFoundation(int effectiveBarLen) {
 		seedBucket = getEffectiveSeedBucket();
 		barStep = protoseq::arcBarStep(arcStepIndex, effectiveBarLen);
@@ -390,6 +413,69 @@ struct Arc : Module {
 			return protoseq::arcShouldRatchet(ratchetProbability, distribution(arcMutableRandomEngine), clampedRatchetCount) ? clampedRatchetCount : 1;
 		}
 		return protoseq::arcShouldRatchetDeterministic(seedBucket, barStep, effectiveBarLen, ratchetProbability, clampedRatchetCount, protoseq::ArcRandomChannelId::RATCH) ? clampedRatchetCount : 1;
+	}
+
+	bool chooseMutableArcSwingStep(float swingProbability) {
+		if (swingProbability <= 0.0f) {
+			return false;
+		}
+		if (swingProbability >= 1.0f) {
+			return true;
+		}
+		std::uniform_real_distribution<double> distribution(0.0, 1.0);
+		return protoseq::arcShouldSwing(swingProbability, distribution(arcMutableRandomEngine));
+	}
+
+	void invalidateArcSwingSchedule() {
+		arcSwingSchedule.clear();
+		scheduledBarStartArcStepIndex = -1;
+		scheduledBarLength = -1;
+		scheduledSeedBucket = -1;
+		scheduledSwingAmount = -1.0f;
+		scheduledSwingProbability = -1.0f;
+		scheduledArcStepDuration = -1.0;
+		scheduledFirstBaseStartSeconds = 0.0;
+	}
+
+	void updateArcSwingSchedule(int effectiveBarLen, double arcStepDuration, float swingAmount, float swingProbability) {
+		const int clampedBarLen = protoseq::arcBarLengthFromParam(static_cast<float>(effectiveBarLen));
+		const int currentBarStep = protoseq::arcBarStep(arcStepIndex, clampedBarLen);
+		const int barStartArcStepIndex = arcStepIndex - currentBarStep;
+		const double firstBaseStartSeconds = currentArcStepStartSeconds - static_cast<double>(currentBarStep) * arcStepDuration;
+		const bool cacheMatches = scheduledBarStartArcStepIndex == barStartArcStepIndex
+			&& scheduledBarLength == clampedBarLen
+			&& scheduledSeedBucket == seedBucket
+			&& scheduledSwingAmount == swingAmount
+			&& scheduledSwingProbability == swingProbability
+			&& std::fabs(scheduledArcStepDuration - arcStepDuration) < 1e-12
+			&& std::fabs(scheduledFirstBaseStartSeconds - firstBaseStartSeconds) < 1e-12
+			&& static_cast<int>(arcSwingSchedule.size()) == clampedBarLen + 1;
+		if (cacheMatches) {
+			return;
+		}
+
+		if (seedBucket > 0) {
+			arcSwingSchedule = protoseq::arcBuildSwingSchedule(clampedBarLen, firstBaseStartSeconds, arcStepDuration, swingAmount, swingProbability, seedBucket);
+		}
+		else {
+			arcSwingSchedule.clear();
+			arcSwingSchedule.reserve(static_cast<std::size_t>(clampedBarLen + 1));
+			const bool swingActive = swingAmount > 0.0f && swingProbability > 0.0f;
+			for (int i = 0; i <= clampedBarLen; ++i) {
+				const int step = i % clampedBarLen;
+				const double baseStart = firstBaseStartSeconds + static_cast<double>(i) * arcStepDuration;
+				const bool swung = swingActive && chooseMutableArcSwingStep(swingProbability);
+				arcSwingSchedule.push_back({step, baseStart, protoseq::arcScheduledEventStartSeconds(baseStart, arcStepDuration, swingAmount, swung), swung});
+			}
+		}
+
+		scheduledBarStartArcStepIndex = barStartArcStepIndex;
+		scheduledBarLength = clampedBarLen;
+		scheduledSeedBucket = seedBucket;
+		scheduledSwingAmount = swingAmount;
+		scheduledSwingProbability = swingProbability;
+		scheduledArcStepDuration = arcStepDuration;
+		scheduledFirstBaseStartSeconds = firstBaseStartSeconds;
 	}
 
 	void updateArcRatchetCount(float ratchetProbability, int selectedRatchetCount, int effectiveBarLen) {
@@ -461,6 +547,7 @@ struct Arc : Module {
 		evaluatedRatchetBarLength = -1;
 		evaluatedRatchetSelectedCount = -1;
 		evaluatedRatchetProbability = -1.0f;
+		invalidateArcSwingSchedule();
 	}
 
 	void startPlayback(bool resetPhase) {
@@ -513,6 +600,12 @@ struct Arc : Module {
 
 		const int barLength = getEffectiveBarLength();
 		updateArcRandomFoundation(barLength);
+		const protoseq::ArcMultiplier arcMultiplier = getEffectiveArcMultiplier();
+		const double arcStepDuration = protoseq::arcStepDurationSeconds(effectiveBpm, arcMultiplier);
+		const float swingAmount = getEffectiveSwingAmount();
+		const float swingProbability = getEffectiveSwingProbability();
+		updateArcSwingSchedule(barLength, arcStepDuration, swingAmount, swingProbability);
+
 		const float brnlSkipProbability = getEffectiveBrnlSkipProbability();
 		updateArcStepSkipDecision(brnlSkipProbability, barLength);
 		const float randomLengthAmount = getEffectiveRandomLengthAmount();
@@ -521,17 +614,22 @@ struct Arc : Module {
 		const float ratchetProbability = getEffectiveRatchetProbability();
 		updateArcRatchetCount(ratchetProbability, selectedRatchetCount, barLength);
 
-		const protoseq::ArcMultiplier arcMultiplier = getEffectiveArcMultiplier();
-		const double arcStepDuration = protoseq::arcStepDurationSeconds(effectiveBpm, arcMultiplier);
-		const double currentArcStepStart = currentArcStepStartSeconds;
-		const double nextArcStepStart = currentArcStepStart + arcStepDuration;
+		const int scheduleIndex = std::min(std::max(barStep, 0), static_cast<int>(arcSwingSchedule.size()) - 2);
+		const protoseq::ArcSwingScheduleEvent& currentArcEvent = arcSwingSchedule[scheduleIndex];
+		const protoseq::ArcSwingScheduleEvent& nextArcEvent = arcSwingSchedule[scheduleIndex + 1];
+		const double currentArcStepStart = currentArcEvent.start;
+		const double nextArcStepStart = nextArcEvent.start;
+		const double currentArcTimelineSeconds = currentArcStepStartSeconds + arcPhase * arcStepDuration;
+		const double currentArcEventPhase = (currentArcTimelineSeconds - currentArcStepStart) / arcStepDuration;
 
 		const float pulseWidth = getEffectivePulseWidth();
 		const float arcGateLength = getEffectiveArcGateLength();
 		const float shortenedArcGateLength = std::min(arcGateLength, arcGateLength * currentArcGateLengthScale);
-		const double effectiveArcGatePhase = protoseq::arcEffectiveGatePhase(shortenedArcGateLength, currentArcStepStart, nextArcStepStart, ARC_GATE_SAFETY_GAP_SECONDS);
+		const double desiredArcGateDuration = static_cast<double>(shortenedArcGateLength) * arcStepDuration;
+		const double effectiveArcGateDuration = protoseq::arcEffectiveGateDurationSeconds(currentArcStepStart, nextArcStepStart, desiredArcGateDuration, ARC_GATE_SAFETY_GAP_SECONDS);
+		const double effectiveArcGatePhase = effectiveArcGateDuration / arcStepDuration;
 		const double ratchetSafetyGapPhase = ARC_GATE_SAFETY_GAP_SECONDS / arcStepDuration;
-		const bool arcGateActive = protoseq::arcRatchetGateActive(arcPhase, effectiveArcGatePhase, currentArcRatchetCount, ratchetSafetyGapPhase);
+		const bool arcGateActive = protoseq::arcRatchetGateActive(currentArcEventPhase, effectiveArcGatePhase, currentArcRatchetCount, ratchetSafetyGapPhase);
 		outputs[MAIN_OUTPUT].setVoltage(mainPhase < pulseWidth ? GATE_HIGH_VOLTAGE : 0.0f);
 		outputs[ARC_OUTPUT].setVoltage((!currentArcStepSkipped && arcGateActive) ? GATE_HIGH_VOLTAGE : 0.0f);
 
