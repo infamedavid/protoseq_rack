@@ -153,3 +153,14 @@ Use this checklist for ARC behavior that depends on VCV Rack runtime, UI widgets
 - [ ] Skip BAR pulse on PLAY still defaults enabled and still suppresses the immediate BAR OUT pulse on start.
 - [ ] Existing ARC tests pass.
 - [ ] Existing Gina tests pass.
+
+## Phase 10D: internal output enum order cleanup
+
+- [ ] ARC loads in Rack.
+- [ ] BAR OUT still pulses at BAR boundaries.
+- [ ] MAIN OUT still outputs the master clock.
+- [ ] ARC OUT still outputs the arpeggio clock.
+- [ ] PLAY/STOP TOGGLE IN still starts and stops playback.
+- [ ] GATE PLAY/STOP IN rising edge still resets and starts playback.
+- [ ] GATE PLAY/STOP IN falling edge still stops playback.
+- [ ] Skip BAR pulse on PLAY still defaults enabled and behaves as before.

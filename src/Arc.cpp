@@ -167,9 +167,9 @@ struct Arc : Module {
 		NUM_INPUTS
 	};
 	enum OutputId {
+		BAR_OUTPUT,
 		MAIN_OUTPUT,
 		ARC_OUTPUT,
-		BAR_OUTPUT,
 		NUM_OUTPUTS
 	};
 	enum LightId {
