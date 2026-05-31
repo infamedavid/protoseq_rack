@@ -1,5 +1,7 @@
 #include "plugin.hpp"
 #include <algorithm>
+#include <cmath>
+#include <functional>
 
 namespace {
 
@@ -58,7 +60,7 @@ struct ArcStopButton : SvgSwitch {
 struct ArcDigitDisplay : TransparentWidget {
 	std::vector<std::shared_ptr<Svg>> digitFrames;
 	SvgWidget* digitWidgets[3]{};
-	int displayValue = 20;
+	std::function<int()> getDisplayValue;
 	int lastDisplayValue = -1;
 
 	ArcDigitDisplay() {
@@ -76,7 +78,8 @@ struct ArcDigitDisplay : TransparentWidget {
 
 	void step() override {
 		TransparentWidget::step();
-		const int clampedValue = std::min(std::max(displayValue, 20), 350);
+		const int rawValue = getDisplayValue ? getDisplayValue() : 20;
+		const int clampedValue = std::min(std::max(rawValue, 20), 350);
 		if (clampedValue == lastDisplayValue) {
 			return;
 		}
@@ -94,6 +97,20 @@ struct ArcDigitDisplay : TransparentWidget {
 		}
 	}
 };
+
+
+static constexpr float MIN_BPM = 20.0f;
+static constexpr float MAX_BPM = 350.0f;
+static constexpr float MAX_MAIN_PULSE_WIDTH = 0.99f;
+static constexpr float GATE_HIGH_VOLTAGE = 10.0f;
+
+static float clamp01(float value) {
+	return std::min(std::max(value, 0.0f), 1.0f);
+}
+
+static float bpmFromNormalized(float normalized) {
+	return MIN_BPM + clamp01(normalized) * (MAX_BPM - MIN_BPM);
+}
 
 static constexpr float ARC_PANEL_MM_W = 60.959999f;
 static constexpr float ARC_PANEL_MM_H = 128.5f;
@@ -152,6 +169,17 @@ struct Arc : Module {
 		NUM_LIGHTS
 	};
 
+	dsp::SchmittTrigger playButtonTrigger;
+	dsp::SchmittTrigger stopButtonTrigger;
+	dsp::SchmittTrigger playCvTrigger;
+	dsp::SchmittTrigger stopCvTrigger;
+	dsp::SchmittTrigger playStopGateTrigger;
+	bool isPlaying = false;
+	bool lastPlayStopGateHigh = false;
+	double mainPhase = 0.0;
+	double arcPhase = 0.0;
+	int displayBpm = 120;
+
 	Arc() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 
@@ -200,10 +228,81 @@ struct Arc : Module {
 		configOutput(ARC_OUTPUT, "ARC OUT");
 	}
 
-	void process(const ProcessArgs& args) override {
-		(void) args;
+	float getEffectiveBpm() const {
+		if (inputs[MAIN_CV_INPUT].isConnected()) {
+			return bpmFromNormalized(inputs[MAIN_CV_INPUT].getVoltage());
+		}
+		return std::min(std::max(params[MAIN_PARAM].getValue(), MIN_BPM), MAX_BPM);
+	}
+
+	float getEffectivePulseWidth() const {
+		const float rawPulseWidth = inputs[PW_CV_INPUT].isConnected()
+			? inputs[PW_CV_INPUT].getVoltage()
+			: params[PW_PARAM].getValue();
+		return std::min(clamp01(rawPulseWidth), MAX_MAIN_PULSE_WIDTH);
+	}
+
+	void resetPhases() {
+		mainPhase = 0.0;
+		arcPhase = 0.0;
+	}
+
+	void startPlayback(bool resetPhase) {
+		if (resetPhase) {
+			resetPhases();
+		}
+		if (!isPlaying) {
+			isPlaying = true;
+		}
+	}
+
+	void stopPlayback(bool resetPhase) {
+		if (isPlaying) {
+			isPlaying = false;
+			if (resetPhase) {
+				resetPhases();
+			}
+		}
 		outputs[MAIN_OUTPUT].setVoltage(0.0f);
 		outputs[ARC_OUTPUT].setVoltage(0.0f);
+	}
+
+	void process(const ProcessArgs& args) override {
+		const float effectiveBpm = getEffectiveBpm();
+		displayBpm = static_cast<int>(std::round(effectiveBpm));
+
+		if (playButtonTrigger.process(params[PLAY_PARAM].getValue()) || playCvTrigger.process(inputs[PLAY_CV_INPUT].getVoltage())) {
+			startPlayback(false);
+		}
+		if (stopButtonTrigger.process(params[STOP_PARAM].getValue()) || stopCvTrigger.process(inputs[STOP_CV_INPUT].getVoltage())) {
+			stopPlayback(true);
+		}
+
+		const float playStopGateVoltage = inputs[PLAY_STOP_GATE_INPUT].getVoltage();
+		if (playStopGateTrigger.process(playStopGateVoltage)) {
+			startPlayback(true);
+		}
+
+		const bool playStopGateHigh = playStopGateVoltage >= 1.0f;
+		if (lastPlayStopGateHigh && !playStopGateHigh) {
+			stopPlayback(false);
+		}
+		lastPlayStopGateHigh = playStopGateHigh;
+
+		if (!isPlaying) {
+			outputs[MAIN_OUTPUT].setVoltage(0.0f);
+			outputs[ARC_OUTPUT].setVoltage(0.0f);
+			return;
+		}
+
+		const float pulseWidth = getEffectivePulseWidth();
+		outputs[MAIN_OUTPUT].setVoltage(mainPhase < pulseWidth ? GATE_HIGH_VOLTAGE : 0.0f);
+		outputs[ARC_OUTPUT].setVoltage(0.0f);
+
+		mainPhase += static_cast<double>(effectiveBpm) * args.sampleTime / 60.0;
+		while (mainPhase >= 1.0) {
+			mainPhase -= 1.0;
+		}
 	}
 };
 
@@ -232,6 +331,9 @@ struct ArcWidget : ModuleWidget {
 		addParam(createParamCentered<ArcStopButton>(arcMm(19.58f, 106.15f), module, Arc::STOP_PARAM));
 
 		auto bpmDisplay = new ArcDigitDisplay();
+		bpmDisplay->getDisplayValue = [module]() {
+			return module ? module->displayBpm : 120;
+		};
 		bpmDisplay->box.pos = arcMm(48.90f, 23.25f);
 		bpmDisplay->box.size = arcMm(6.95f, 3.88f);
 		addChild(bpmDisplay);
