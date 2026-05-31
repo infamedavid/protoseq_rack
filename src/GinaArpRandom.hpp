@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ProtoRandom.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -11,7 +13,6 @@ struct WeightedIndex {
     float weight;
 };
 
-std::uint64_t mixSeed(std::uint64_t state, std::uint64_t value);
 std::uint64_t buildDeterministicSeed(
     int seedBucket,
     int noteIndex,
