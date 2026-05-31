@@ -35,6 +35,14 @@
         "Expander",
         "Controller"
       ]
+    },
+    {
+      "slug": "Arc",
+      "name": "ARC",
+      "description": "ARpeggio Clock master and derived arpeggio clock module",
+      "tags": [
+        "Clock generator"
+      ]
     }
   ]
 }
