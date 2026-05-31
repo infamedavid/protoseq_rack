@@ -7,6 +7,7 @@ SOURCES += src/GinaArpScales.cpp
 SOURCES += src/GinaArpRandom.cpp
 SOURCES += src/ProtoseqBlank.cpp
 SOURCES += src/GinasExpander.cpp
+SOURCES += src/Arc.cpp
 
 DISTRIBUTABLES += res
 
