@@ -72,3 +72,15 @@ Use this checklist for ARC behavior that depends on VCV Rack runtime, UI widgets
 - [ ] MAIN OUT is unaffected by RLEN at all settings.
 - [ ] With SEED above 0, the same SEED, BAR, GLEN, and RLEN settings repeat the same gate-length pattern by BAR.
 - [ ] With SEED at 0 and RLEN above 0, ARC OUT gate lengths are mutable/irrepeating.
+
+## Phase 7: RATCH ratchet bursts
+
+- [ ] BRNL-skipped ARC steps never emit ratchets.
+- [ ] NRTC at 1 produces normal single ARC gates with no ratchet subdivision.
+- [ ] RRTC at 0.0 produces no ratchets.
+- [ ] RRTC at 1.0 ratchets every eligible non-skipped ARC step when NRTC is above 1.
+- [ ] Ratchet subpulses fit inside the final effective ARC gate length and do not extend the ARC step.
+- [ ] Ratchets leave low gaps where possible and avoid stuck-high/overlap at high ARPC and high NRTC.
+- [ ] MAIN OUT is unaffected by NRTC/RRTC at all settings.
+- [ ] With SEED above 0, the same SEED, BAR, NRTC, and RRTC settings repeat the same ratchet positions by BAR.
+- [ ] With SEED at 0, RRTC above 0, and NRTC above 1, ratchet selection is mutable/irrepeating.

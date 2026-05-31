@@ -43,6 +43,8 @@ constexpr int ARC_MULTIPLIER_INDEX_MIN = 0;
 constexpr int ARC_MULTIPLIER_INDEX_MAX = 20;
 constexpr int ARC_BAR_MIN_EVENTS = 1;
 constexpr int ARC_BAR_MAX_EVENTS = 64;
+constexpr int ARC_RATCHET_COUNT_MIN = 1;
+constexpr int ARC_RATCHET_COUNT_MAX = 8;
 
 constexpr int ARC_SEED_BUCKET_MIN = 0;
 constexpr int ARC_SEED_BUCKET_MAX = 1000;
@@ -81,6 +83,15 @@ inline int arcBarLengthFromParam(float value) {
 inline int arcBarLengthFromNormalized(float voltage) {
 	const float scaled = static_cast<float>(ARC_BAR_MIN_EVENTS) + arcClamp01(voltage) * static_cast<float>(ARC_BAR_MAX_EVENTS - ARC_BAR_MIN_EVENTS);
 	return arcBarLengthFromParam(scaled);
+}
+
+inline int arcRatchetCountFromParam(float value) {
+	return std::min(std::max(static_cast<int>(std::round(value)), ARC_RATCHET_COUNT_MIN), ARC_RATCHET_COUNT_MAX);
+}
+
+inline int arcRatchetCountFromNormalized(float voltage) {
+	const float scaled = static_cast<float>(ARC_RATCHET_COUNT_MIN) + arcClamp01(voltage) * static_cast<float>(ARC_RATCHET_COUNT_MAX - ARC_RATCHET_COUNT_MIN);
+	return arcRatchetCountFromParam(scaled);
 }
 
 inline int arcSeedBucketFromNormalized(float value) {
@@ -162,6 +173,43 @@ inline float arcApplyRandomLengthShortening(float gateLength, float randomLength
 
 inline float arcApplyRandomLengthShorteningDeterministic(int seedBucket, int barStep, int barLen, float gateLength, float randomLengthAmount, ArcRandomChannelId channelId = ArcRandomChannelId::RLEN) {
 	return arcApplyRandomLengthShortening(gateLength, randomLengthAmount, arcUnitRandomFromSeed(buildArcSeed(seedBucket, barStep, barLen, channelId)));
+}
+
+inline bool arcShouldRatchet(float ratchetProbability, double randomUnit, int ratchetCount) {
+	if (arcRatchetCountFromParam(static_cast<float>(ratchetCount)) <= 1) {
+		return false;
+	}
+	const float clampedProbability = arcClamp01(ratchetProbability);
+	if (clampedProbability <= 0.0f) {
+		return false;
+	}
+	if (clampedProbability >= 1.0f) {
+		return true;
+	}
+	return std::min(std::max(randomUnit, 0.0), 1.0) < static_cast<double>(clampedProbability);
+}
+
+inline bool arcShouldRatchetDeterministic(int seedBucket, int barStep, int barLen, float ratchetProbability, int ratchetCount, ArcRandomChannelId channelId = ArcRandomChannelId::RATCH) {
+	return arcShouldRatchet(ratchetProbability, arcUnitRandomFromSeed(buildArcSeed(seedBucket, barStep, barLen, channelId)), ratchetCount);
+}
+
+inline bool arcRatchetGateActive(double stepPhase, double effectiveGatePhase, int ratchetCount, double safetyGapPhase) {
+	const double gatePhase = std::min(std::max(effectiveGatePhase, 0.0), 1.0);
+	if (stepPhase < 0.0 || stepPhase >= gatePhase) {
+		return false;
+	}
+	const int clampedRatchetCount = arcRatchetCountFromParam(static_cast<float>(ratchetCount));
+	if (clampedRatchetCount <= 1) {
+		return true;
+	}
+	const double cellPhase = gatePhase / static_cast<double>(clampedRatchetCount);
+	if (cellPhase <= 0.0) {
+		return false;
+	}
+	const double gapPhase = std::min(std::max(safetyGapPhase, 0.0), cellPhase * 0.5);
+	const double highPhase = std::max(cellPhase - gapPhase, 0.0);
+	const double positionInCell = std::fmod(stepPhase, cellPhase);
+	return positionInCell < highPhase;
 }
 
 } // namespace protoseq

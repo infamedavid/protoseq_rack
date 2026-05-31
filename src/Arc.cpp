@@ -202,6 +202,13 @@ struct Arc : Module {
 	int evaluatedRlenBarStep = -1;
 	int evaluatedRlenBarLength = -1;
 	float evaluatedRlenAmount = -1.0f;
+	int currentArcRatchetCount = 1;
+	int evaluatedRatchetArcStepIndex = -1;
+	int evaluatedRatchetSeedBucket = -1;
+	int evaluatedRatchetBarStep = -1;
+	int evaluatedRatchetBarLength = -1;
+	int evaluatedRatchetSelectedCount = -1;
+	float evaluatedRatchetProbability = -1.0f;
 
 	Arc() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -214,7 +221,7 @@ struct Arc : Module {
 		configParam(RLEN_PARAM, 0.0f, 1.0f, 0.0f, "RLEN", "%", 0.0f, 100.0f);
 		configParam(SWNG_PARAM, 0.0f, 1.0f, 0.0f, "SWNG", "%", 0.0f, 100.0f);
 		configParam(RSWN_PARAM, 0.0f, 1.0f, 0.0f, "RSWN", "%", 0.0f, 100.0f);
-		configParam(NRTC_PARAM, 1.0f, 8.0f, 1.0f, "NRTC");
+		configParam(NRTC_PARAM, static_cast<float>(protoseq::ARC_RATCHET_COUNT_MIN), static_cast<float>(protoseq::ARC_RATCHET_COUNT_MAX), 1.0f, "NRTC");
 		configParam(RRTC_PARAM, 0.0f, 1.0f, 0.0f, "RRTC", "%", 0.0f, 100.0f);
 		configParam(BRNL_PARAM, 0.0f, 1.0f, 0.0f, "BRNL", "%", 0.0f, 100.0f);
 		configParam(SEED_PARAM, 0.0f, 1.0f, 0.0f, "SEED", "", 0.0f, 1000.0f);
@@ -305,6 +312,19 @@ struct Arc : Module {
 		return clamp01(rawRlen);
 	}
 
+	int getEffectiveRatchetSelectedCount() const {
+		return inputs[NRTC_CV_INPUT].isConnected()
+			? protoseq::arcRatchetCountFromNormalized(inputs[NRTC_CV_INPUT].getVoltage())
+			: protoseq::arcRatchetCountFromParam(params[NRTC_PARAM].getValue());
+	}
+
+	float getEffectiveRatchetProbability() const {
+		const float rawRrtc = inputs[RRTC_CV_INPUT].isConnected()
+			? inputs[RRTC_CV_INPUT].getVoltage()
+			: params[RRTC_PARAM].getValue();
+		return clamp01(rawRrtc);
+	}
+
 	void updateArcRandomFoundation(int effectiveBarLen) {
 		seedBucket = getEffectiveSeedBucket();
 		barStep = protoseq::arcBarStep(arcStepIndex, effectiveBarLen);
@@ -343,6 +363,7 @@ struct Arc : Module {
 	void updateArcGateLengthScale(float randomLengthAmount, int effectiveBarLen) {
 		if (currentArcStepSkipped || randomLengthAmount <= 0.0f) {
 			currentArcGateLengthScale = 1.0f;
+			evaluatedRlenArcStepIndex = -1;
 			return;
 		}
 		if (evaluatedRlenArcStepIndex == arcStepIndex && evaluatedRlenSeedBucket == seedBucket && evaluatedRlenBarStep == barStep && evaluatedRlenBarLength == effectiveBarLen && evaluatedRlenAmount == randomLengthAmount) {
@@ -356,13 +377,54 @@ struct Arc : Module {
 		evaluatedRlenAmount = randomLengthAmount;
 	}
 
+	int chooseArcRatchetCount(float ratchetProbability, int selectedRatchetCount, int effectiveBarLen) {
+		const int clampedRatchetCount = protoseq::arcRatchetCountFromParam(static_cast<float>(selectedRatchetCount));
+		if (clampedRatchetCount <= 1 || ratchetProbability <= 0.0f) {
+			return 1;
+		}
+		if (ratchetProbability >= 1.0f) {
+			return clampedRatchetCount;
+		}
+		if (seedBucket == 0) {
+			std::uniform_real_distribution<double> distribution(0.0, 1.0);
+			return protoseq::arcShouldRatchet(ratchetProbability, distribution(arcMutableRandomEngine), clampedRatchetCount) ? clampedRatchetCount : 1;
+		}
+		return protoseq::arcShouldRatchetDeterministic(seedBucket, barStep, effectiveBarLen, ratchetProbability, clampedRatchetCount, protoseq::ArcRandomChannelId::RATCH) ? clampedRatchetCount : 1;
+	}
+
+	void updateArcRatchetCount(float ratchetProbability, int selectedRatchetCount, int effectiveBarLen) {
+		const int clampedRatchetCount = protoseq::arcRatchetCountFromParam(static_cast<float>(selectedRatchetCount));
+		if (currentArcStepSkipped || clampedRatchetCount <= 1 || ratchetProbability <= 0.0f) {
+			currentArcRatchetCount = 1;
+			evaluatedRatchetArcStepIndex = -1;
+			return;
+		}
+		if (ratchetProbability >= 1.0f) {
+			currentArcRatchetCount = clampedRatchetCount;
+			evaluatedRatchetArcStepIndex = -1;
+			return;
+		}
+		if (evaluatedRatchetArcStepIndex == arcStepIndex && evaluatedRatchetSeedBucket == seedBucket && evaluatedRatchetBarStep == barStep && evaluatedRatchetBarLength == effectiveBarLen && evaluatedRatchetSelectedCount == clampedRatchetCount && evaluatedRatchetProbability == ratchetProbability) {
+			return;
+		}
+		currentArcRatchetCount = chooseArcRatchetCount(ratchetProbability, clampedRatchetCount, effectiveBarLen);
+		evaluatedRatchetArcStepIndex = arcStepIndex;
+		evaluatedRatchetSeedBucket = seedBucket;
+		evaluatedRatchetBarStep = barStep;
+		evaluatedRatchetBarLength = effectiveBarLen;
+		evaluatedRatchetSelectedCount = clampedRatchetCount;
+		evaluatedRatchetProbability = ratchetProbability;
+	}
+
 	void updateArcStepSkipDecision(float skipProbability, int effectiveBarLen) {
 		if (skipProbability <= 0.0f) {
 			currentArcStepSkipped = false;
+			evaluatedArcStepIndex = -1;
 			return;
 		}
 		if (skipProbability >= 1.0f) {
 			currentArcStepSkipped = true;
+			evaluatedArcStepIndex = -1;
 			return;
 		}
 		if (evaluatedArcStepIndex == arcStepIndex && evaluatedSeedBucket == seedBucket && evaluatedBarStep == barStep && evaluatedBarLength == effectiveBarLen) {
@@ -392,6 +454,13 @@ struct Arc : Module {
 		evaluatedRlenBarStep = -1;
 		evaluatedRlenBarLength = -1;
 		evaluatedRlenAmount = -1.0f;
+		currentArcRatchetCount = 1;
+		evaluatedRatchetArcStepIndex = -1;
+		evaluatedRatchetSeedBucket = -1;
+		evaluatedRatchetBarStep = -1;
+		evaluatedRatchetBarLength = -1;
+		evaluatedRatchetSelectedCount = -1;
+		evaluatedRatchetProbability = -1.0f;
 	}
 
 	void startPlayback(bool resetPhase) {
@@ -448,6 +517,9 @@ struct Arc : Module {
 		updateArcStepSkipDecision(brnlSkipProbability, barLength);
 		const float randomLengthAmount = getEffectiveRandomLengthAmount();
 		updateArcGateLengthScale(randomLengthAmount, barLength);
+		const int selectedRatchetCount = getEffectiveRatchetSelectedCount();
+		const float ratchetProbability = getEffectiveRatchetProbability();
+		updateArcRatchetCount(ratchetProbability, selectedRatchetCount, barLength);
 
 		const protoseq::ArcMultiplier arcMultiplier = getEffectiveArcMultiplier();
 		const double arcStepDuration = protoseq::arcStepDurationSeconds(effectiveBpm, arcMultiplier);
@@ -458,8 +530,10 @@ struct Arc : Module {
 		const float arcGateLength = getEffectiveArcGateLength();
 		const float shortenedArcGateLength = std::min(arcGateLength, arcGateLength * currentArcGateLengthScale);
 		const double effectiveArcGatePhase = protoseq::arcEffectiveGatePhase(shortenedArcGateLength, currentArcStepStart, nextArcStepStart, ARC_GATE_SAFETY_GAP_SECONDS);
+		const double ratchetSafetyGapPhase = ARC_GATE_SAFETY_GAP_SECONDS / arcStepDuration;
+		const bool arcGateActive = protoseq::arcRatchetGateActive(arcPhase, effectiveArcGatePhase, currentArcRatchetCount, ratchetSafetyGapPhase);
 		outputs[MAIN_OUTPUT].setVoltage(mainPhase < pulseWidth ? GATE_HIGH_VOLTAGE : 0.0f);
-		outputs[ARC_OUTPUT].setVoltage((!currentArcStepSkipped && arcPhase < effectiveArcGatePhase) ? GATE_HIGH_VOLTAGE : 0.0f);
+		outputs[ARC_OUTPUT].setVoltage((!currentArcStepSkipped && arcGateActive) ? GATE_HIGH_VOLTAGE : 0.0f);
 
 		const double mainPhaseDelta = static_cast<double>(effectiveBpm) * args.sampleTime / 60.0;
 		mainPhase += mainPhaseDelta;
@@ -475,6 +549,7 @@ struct Arc : Module {
 			barStep = protoseq::arcBarStep(arcStepIndex, barLength);
 			evaluatedArcStepIndex = -1;
 			evaluatedRlenArcStepIndex = -1;
+			evaluatedRatchetArcStepIndex = -1;
 		}
 	}
 };

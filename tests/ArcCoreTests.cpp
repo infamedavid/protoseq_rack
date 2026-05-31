@@ -50,6 +50,12 @@ int main() {
 	assert(arcBarLengthFromParam(100.0f) == 64);
 	assert(arcBarLengthFromNormalized(0.0f) == 1);
 	assert(arcBarLengthFromNormalized(1.0f) == 64);
+	assert(arcRatchetCountFromParam(-10.0f) == 1);
+	assert(arcRatchetCountFromParam(1.4f) == 1);
+	assert(arcRatchetCountFromParam(1.5f) == 2);
+	assert(arcRatchetCountFromParam(100.0f) == 8);
+	assert(arcRatchetCountFromNormalized(0.0f) == 1);
+	assert(arcRatchetCountFromNormalized(1.0f) == 8);
 
 	assert(arcSeedBucketFromNormalized(-1.0f) == 0);
 	assert(arcSeedBucketFromNormalized(0.0f) == 0);
@@ -104,6 +110,20 @@ int main() {
 	assert(approx(rlenA, rlenB));
 	assert(!approx(rlenA, rlenDifferentSeed));
 	assert(!approx(rlenA, brnlChannelLength));
+
+	assert(!arcShouldRatchet(1.0f, 0.0, 1));
+	assert(!arcShouldRatchet(0.0f, 0.0, 4));
+	assert(arcShouldRatchet(1.0f, 0.999, 4));
+	const bool fixedRatchetA = arcShouldRatchetDeterministic(321, 3, 8, 0.5f, 4, ArcRandomChannelId::RATCH);
+	const bool fixedRatchetB = arcShouldRatchetDeterministic(321, 3, 8, 0.5f, 4, ArcRandomChannelId::RATCH);
+	assert(fixedRatchetA == fixedRatchetB);
+	assert(arcUnitRandomFromSeed(buildArcSeed(321, 3, 8, ArcRandomChannelId::RATCH)) != arcUnitRandomFromSeed(buildArcSeed(321, 3, 8, ArcRandomChannelId::BRNL)));
+	assert(arcUnitRandomFromSeed(buildArcSeed(321, 3, 8, ArcRandomChannelId::RATCH)) != arcUnitRandomFromSeed(buildArcSeed(321, 3, 8, ArcRandomChannelId::RLEN)));
+	assert(arcRatchetGateActive(0.05, 0.6, 1, 0.01));
+	assert(!arcRatchetGateActive(0.61, 0.6, 1, 0.01));
+	assert(arcRatchetGateActive(0.05, 0.6, 3, 0.01));
+	assert(!arcRatchetGateActive(0.195, 0.6, 3, 0.01));
+	assert(arcRatchetGateActive(0.21, 0.6, 3, 0.01));
 
 	std::cout << "All ARC core tests passed\n";
 	return 0;
