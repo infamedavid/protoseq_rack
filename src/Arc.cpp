@@ -266,82 +266,82 @@ struct Arc : Module {
 		configOutput(ARC_OUTPUT, "ARC OUT - Arpeggio clock output");
 	}
 
-	float getEffectiveBpm() const {
+	float getEffectiveBpm() {
 		if (inputs[MAIN_CV_INPUT].isConnected()) {
 			return bpmFromNormalized(inputs[MAIN_CV_INPUT].getVoltage());
 		}
 		return std::min(std::max(params[MAIN_PARAM].getValue(), MIN_BPM), MAX_BPM);
 	}
 
-	float getEffectivePulseWidth() const {
+	float getEffectivePulseWidth() {
 		const float rawPulseWidth = inputs[PW_CV_INPUT].isConnected()
 			? inputs[PW_CV_INPUT].getVoltage()
 			: params[PW_PARAM].getValue();
 		return std::min(clamp01(rawPulseWidth), MAX_MAIN_PULSE_WIDTH);
 	}
 
-	protoseq::ArcMultiplier getEffectiveArcMultiplier() const {
+	protoseq::ArcMultiplier getEffectiveArcMultiplier() {
 		const int index = inputs[ARPC_CV_INPUT].isConnected()
 			? protoseq::arcMultiplierIndexFromNormalized(inputs[ARPC_CV_INPUT].getVoltage())
 			: protoseq::arcMultiplierIndexFromParam(params[ARPC_PARAM].getValue());
 		return protoseq::arcMultiplierForIndex(index);
 	}
 
-	float getEffectiveArcGateLength() const {
+	float getEffectiveArcGateLength() {
 		const float rawGateLength = inputs[GLEN_CV_INPUT].isConnected()
 			? inputs[GLEN_CV_INPUT].getVoltage()
 			: params[GLEN_PARAM].getValue();
 		return std::min(clamp01(rawGateLength), MAX_ARC_GATE_LENGTH);
 	}
 
-	int getEffectiveBarLength() const {
+	int getEffectiveBarLength() {
 		return inputs[BAR_CV_INPUT].isConnected()
 			? protoseq::arcBarLengthFromNormalized(inputs[BAR_CV_INPUT].getVoltage())
 			: protoseq::arcBarLengthFromParam(params[BAR_PARAM].getValue());
 	}
 
-	int getEffectiveSeedBucket() const {
+	int getEffectiveSeedBucket() {
 		const float rawSeed = inputs[SEED_CV_INPUT].isConnected()
 			? inputs[SEED_CV_INPUT].getVoltage()
 			: params[SEED_PARAM].getValue();
 		return protoseq::arcSeedBucketFromNormalized(rawSeed);
 	}
 
-	float getEffectiveBrnlSkipProbability() const {
+	float getEffectiveBrnlSkipProbability() {
 		const float rawBrnl = inputs[BRNL_CV_INPUT].isConnected()
 			? inputs[BRNL_CV_INPUT].getVoltage()
 			: params[BRNL_PARAM].getValue();
 		return clamp01(rawBrnl);
 	}
 
-	float getEffectiveRandomLengthAmount() const {
+	float getEffectiveRandomLengthAmount() {
 		const float rawRlen = inputs[RLEN_CV_INPUT].isConnected()
 			? inputs[RLEN_CV_INPUT].getVoltage()
 			: params[RLEN_PARAM].getValue();
 		return clamp01(rawRlen);
 	}
 
-	int getEffectiveRatchetSelectedCount() const {
+	int getEffectiveRatchetSelectedCount() {
 		return inputs[NRTC_CV_INPUT].isConnected()
 			? protoseq::arcRatchetCountFromNormalized(inputs[NRTC_CV_INPUT].getVoltage())
 			: protoseq::arcRatchetCountFromParam(params[NRTC_PARAM].getValue());
 	}
 
-	float getEffectiveRatchetProbability() const {
+	float getEffectiveRatchetProbability() {
 		const float rawRrtc = inputs[RRTC_CV_INPUT].isConnected()
 			? inputs[RRTC_CV_INPUT].getVoltage()
 			: params[RRTC_PARAM].getValue();
 		return clamp01(rawRrtc);
 	}
 
-	float getEffectiveSwingAmount() const {
+	float getEffectiveSwingAmount() {
 		const float rawSwing = inputs[SWNG_CV_INPUT].isConnected()
 			? inputs[SWNG_CV_INPUT].getVoltage()
 			: params[SWNG_PARAM].getValue();
 		return clamp01(rawSwing);
 	}
 
-	float getEffectiveSwingProbability() const {
+	float getEffectiveSwingProbability() {
 		const float rawSwingProbability = inputs[RSWN_CV_INPUT].isConnected()
 			? inputs[RSWN_CV_INPUT].getVoltage()
 			: params[RSWN_PARAM].getValue();
