@@ -106,6 +106,25 @@ inline std::uint64_t buildArcSeed(int seedBucket, int barStep, int barLen, ArcRa
 	return state;
 }
 
+inline double arcStepDurationSeconds(float bpm, const ArcMultiplier& multiplier) {
+	const float clampedBpm = std::max(bpm, 1.0f);
+	return (60.0 / static_cast<double>(clampedBpm)) * static_cast<double>(multiplier.denominator) / static_cast<double>(multiplier.numerator);
+}
+
+inline double arcEffectiveGateDurationSeconds(double currentStepStart, double nextStepStart, double desiredGateDuration, double safetyGap) {
+	const double available = std::max(0.0, nextStepStart - currentStepStart - std::max(safetyGap, 0.0));
+	return std::min(std::max(desiredGateDuration, 0.0), available);
+}
+
+inline double arcEffectiveGatePhase(float gateLength, double currentStepStart, double nextStepStart, double safetyGap) {
+	const double stepDuration = std::max(nextStepStart - currentStepStart, 0.0);
+	if (stepDuration <= 0.0) {
+		return 0.0;
+	}
+	const double desiredGateDuration = static_cast<double>(arcClamp01(gateLength)) * stepDuration;
+	return arcEffectiveGateDurationSeconds(currentStepStart, nextStepStart, desiredGateDuration, safetyGap) / stepDuration;
+}
+
 inline double arcUnitRandomFromSeed(std::uint64_t seed) {
 	seed ^= seed >> 30U;
 	seed *= 0xbf58476d1ce4e5b9ULL;

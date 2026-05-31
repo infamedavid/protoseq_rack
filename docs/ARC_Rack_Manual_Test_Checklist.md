@@ -53,3 +53,12 @@ Use this checklist for ARC behavior that depends on VCV Rack runtime, UI widgets
 - [ ] BRNL at 1.0 silences ARC OUT while MAIN OUT keeps running.
 - [ ] With SEED above 0, the same SEED, BAR, and BRNL settings repeat the same ARC OUT skip positions by BAR.
 - [ ] With SEED at 0 and BRNL between 0.0 and 1.0, ARC OUT skip positions are mutable/irrepeating.
+
+## Phase 5: monophonic ARC scheduler
+
+- [ ] ARC OUT never overlaps or stays high continuously at normal ARPC values.
+- [ ] ARC OUT never overlaps or stays high continuously at high ARPC values such as 24 and 32.
+- [ ] GLEN is clamped when it would collide with the next ARC event, leaving a clear low gap.
+- [ ] Fractional ARPC values (`1.5`, `2.5`, `3.5`) still produce the expected event counts over 2 MAIN periods.
+- [ ] BRNL skip still suppresses ARC OUT cleanly.
+- [ ] STOP forces MAIN OUT and ARC OUT low.

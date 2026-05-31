@@ -84,6 +84,15 @@ int main() {
 	assert(arcShouldSkipBernoulliDeterministic(321, 3, 8, 1.0f, ArcRandomChannelId::BRNL) == true);
 	assert(arcUnitRandomFromSeed(buildArcSeed(321, 3, 8, ArcRandomChannelId::BRNL)) != arcUnitRandomFromSeed(buildArcSeed(321, 3, 8, ArcRandomChannelId::RLEN)));
 
+	const ArcMultiplier oneX = arcMultiplierForIndex(0);
+	const ArcMultiplier onePointFiveX = arcMultiplierForIndex(1);
+	assert(approx(static_cast<float>(arcStepDurationSeconds(120.0f, oneX)), 0.5f));
+	assert(approx(static_cast<float>(arcStepDurationSeconds(120.0f, onePointFiveX)), 1.0f / 3.0f));
+	assert(approx(static_cast<float>(arcEffectiveGateDurationSeconds(10.0, 10.5, 0.4, 0.01)), 0.4f));
+	assert(approx(static_cast<float>(arcEffectiveGateDurationSeconds(10.0, 10.5, 0.5, 0.01)), 0.49f));
+	assert(approx(static_cast<float>(arcEffectiveGatePhase(1.0f, 10.0, 10.5, 0.01)), 0.98f));
+	assert(approx(static_cast<float>(arcEffectiveGatePhase(0.5f, 10.0, 10.5, 0.01)), 0.5f));
+
 	std::cout << "All ARC core tests passed\n";
 	return 0;
 }

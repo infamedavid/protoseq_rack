@@ -108,6 +108,7 @@ static constexpr float MAX_BPM = 350.0f;
 static constexpr float MAX_MAIN_PULSE_WIDTH = 0.99f;
 static constexpr float GATE_HIGH_VOLTAGE = 10.0f;
 static constexpr float MAX_ARC_GATE_LENGTH = 0.99f;
+static constexpr double ARC_GATE_SAFETY_GAP_SECONDS = 0.001;
 
 static float clamp01(float value) {
 	return protoseq::arcClamp01(value);
@@ -183,6 +184,7 @@ struct Arc : Module {
 	bool lastPlayStopGateHigh = false;
 	double mainPhase = 0.0;
 	double arcPhase = 0.0;
+	double currentArcStepStartSeconds = 0.0;
 	int displayBpm = 120;
 	int arcStepIndex = 0;
 	int barStep = 0;
@@ -335,6 +337,7 @@ struct Arc : Module {
 	void resetPhases() {
 		mainPhase = 0.0;
 		arcPhase = 0.0;
+		currentArcStepStartSeconds = 0.0;
 		arcStepIndex = 0;
 		barStep = 0;
 		currentArcStepSkipped = false;
@@ -397,10 +400,16 @@ struct Arc : Module {
 		const float brnlSkipProbability = getEffectiveBrnlSkipProbability();
 		updateArcStepSkipDecision(brnlSkipProbability, barLength);
 
+		const protoseq::ArcMultiplier arcMultiplier = getEffectiveArcMultiplier();
+		const double arcStepDuration = protoseq::arcStepDurationSeconds(effectiveBpm, arcMultiplier);
+		const double currentArcStepStart = currentArcStepStartSeconds;
+		const double nextArcStepStart = currentArcStepStart + arcStepDuration;
+
 		const float pulseWidth = getEffectivePulseWidth();
 		const float arcGateLength = getEffectiveArcGateLength();
+		const double effectiveArcGatePhase = protoseq::arcEffectiveGatePhase(arcGateLength, currentArcStepStart, nextArcStepStart, ARC_GATE_SAFETY_GAP_SECONDS);
 		outputs[MAIN_OUTPUT].setVoltage(mainPhase < pulseWidth ? GATE_HIGH_VOLTAGE : 0.0f);
-		outputs[ARC_OUTPUT].setVoltage((!currentArcStepSkipped && arcPhase < arcGateLength) ? GATE_HIGH_VOLTAGE : 0.0f);
+		outputs[ARC_OUTPUT].setVoltage((!currentArcStepSkipped && arcPhase < effectiveArcGatePhase) ? GATE_HIGH_VOLTAGE : 0.0f);
 
 		const double mainPhaseDelta = static_cast<double>(effectiveBpm) * args.sampleTime / 60.0;
 		mainPhase += mainPhaseDelta;
@@ -408,10 +417,10 @@ struct Arc : Module {
 			mainPhase -= 1.0;
 		}
 
-		const protoseq::ArcMultiplier arcMultiplier = getEffectiveArcMultiplier();
-		arcPhase += mainPhaseDelta * static_cast<double>(arcMultiplier.numerator) / static_cast<double>(arcMultiplier.denominator);
+		arcPhase += args.sampleTime / arcStepDuration;
 		while (arcPhase >= 1.0) {
 			arcPhase -= 1.0;
+			currentArcStepStartSeconds += arcStepDuration;
 			++arcStepIndex;
 			barStep = protoseq::arcBarStep(arcStepIndex, barLength);
 			evaluatedArcStepIndex = -1;
