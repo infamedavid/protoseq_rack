@@ -106,4 +106,28 @@ inline std::uint64_t buildArcSeed(int seedBucket, int barStep, int barLen, ArcRa
 	return state;
 }
 
+inline double arcUnitRandomFromSeed(std::uint64_t seed) {
+	seed ^= seed >> 30U;
+	seed *= 0xbf58476d1ce4e5b9ULL;
+	seed ^= seed >> 27U;
+	seed *= 0x94d049bb133111ebULL;
+	seed ^= seed >> 31U;
+	return static_cast<double>(seed >> 11U) * (1.0 / 9007199254740992.0);
+}
+
+inline bool arcShouldSkipBernoulli(float skipProbability, double randomUnit) {
+	const float clampedProbability = arcClamp01(skipProbability);
+	if (clampedProbability <= 0.0f) {
+		return false;
+	}
+	if (clampedProbability >= 1.0f) {
+		return true;
+	}
+	return std::min(std::max(randomUnit, 0.0), 1.0) < static_cast<double>(clampedProbability);
+}
+
+inline bool arcShouldSkipBernoulliDeterministic(int seedBucket, int barStep, int barLen, float skipProbability, ArcRandomChannelId channelId = ArcRandomChannelId::BRNL) {
+	return arcShouldSkipBernoulli(skipProbability, arcUnitRandomFromSeed(buildArcSeed(seedBucket, barStep, barLen, channelId)));
+}
+
 } // namespace protoseq

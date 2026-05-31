@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdint>
 #include <functional>
+#include <random>
 
 namespace {
 
@@ -187,6 +188,12 @@ struct Arc : Module {
 	int barStep = 0;
 	int seedBucket = 0;
 	std::array<std::uint64_t, 4> arcChannelSeeds{};
+	std::mt19937_64 arcMutableRandomEngine{std::random_device{}()};
+	bool currentArcStepSkipped = false;
+	int evaluatedArcStepIndex = -1;
+	int evaluatedSeedBucket = -1;
+	int evaluatedBarStep = -1;
+	int evaluatedBarLength = -1;
 
 	Arc() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -276,6 +283,13 @@ struct Arc : Module {
 		return protoseq::arcSeedBucketFromNormalized(rawSeed);
 	}
 
+	float getEffectiveBrnlSkipProbability() const {
+		const float rawBrnl = inputs[BRNL_CV_INPUT].isConnected()
+			? inputs[BRNL_CV_INPUT].getVoltage()
+			: params[BRNL_PARAM].getValue();
+		return clamp01(rawBrnl);
+	}
+
 	void updateArcRandomFoundation(int effectiveBarLen) {
 		seedBucket = getEffectiveSeedBucket();
 		barStep = protoseq::arcBarStep(arcStepIndex, effectiveBarLen);
@@ -285,11 +299,49 @@ struct Arc : Module {
 		arcChannelSeeds[3] = protoseq::buildArcSeed(seedBucket, barStep, effectiveBarLen, protoseq::ArcRandomChannelId::SWNG);
 	}
 
+	bool chooseArcStepSkipped(float skipProbability, int effectiveBarLen) {
+		if (skipProbability <= 0.0f) {
+			return false;
+		}
+		if (skipProbability >= 1.0f) {
+			return true;
+		}
+		if (seedBucket == 0) {
+			std::uniform_real_distribution<double> distribution(0.0, 1.0);
+			return protoseq::arcShouldSkipBernoulli(skipProbability, distribution(arcMutableRandomEngine));
+		}
+		return protoseq::arcShouldSkipBernoulliDeterministic(seedBucket, barStep, effectiveBarLen, skipProbability, protoseq::ArcRandomChannelId::BRNL);
+	}
+
+	void updateArcStepSkipDecision(float skipProbability, int effectiveBarLen) {
+		if (skipProbability <= 0.0f) {
+			currentArcStepSkipped = false;
+			return;
+		}
+		if (skipProbability >= 1.0f) {
+			currentArcStepSkipped = true;
+			return;
+		}
+		if (evaluatedArcStepIndex == arcStepIndex && evaluatedSeedBucket == seedBucket && evaluatedBarStep == barStep && evaluatedBarLength == effectiveBarLen) {
+			return;
+		}
+		currentArcStepSkipped = chooseArcStepSkipped(skipProbability, effectiveBarLen);
+		evaluatedArcStepIndex = arcStepIndex;
+		evaluatedSeedBucket = seedBucket;
+		evaluatedBarStep = barStep;
+		evaluatedBarLength = effectiveBarLen;
+	}
+
 	void resetPhases() {
 		mainPhase = 0.0;
 		arcPhase = 0.0;
 		arcStepIndex = 0;
 		barStep = 0;
+		currentArcStepSkipped = false;
+		evaluatedArcStepIndex = -1;
+		evaluatedSeedBucket = -1;
+		evaluatedBarStep = -1;
+		evaluatedBarLength = -1;
 	}
 
 	void startPlayback(bool resetPhase) {
@@ -342,11 +394,13 @@ struct Arc : Module {
 
 		const int barLength = getEffectiveBarLength();
 		updateArcRandomFoundation(barLength);
+		const float brnlSkipProbability = getEffectiveBrnlSkipProbability();
+		updateArcStepSkipDecision(brnlSkipProbability, barLength);
 
 		const float pulseWidth = getEffectivePulseWidth();
 		const float arcGateLength = getEffectiveArcGateLength();
 		outputs[MAIN_OUTPUT].setVoltage(mainPhase < pulseWidth ? GATE_HIGH_VOLTAGE : 0.0f);
-		outputs[ARC_OUTPUT].setVoltage(arcPhase < arcGateLength ? GATE_HIGH_VOLTAGE : 0.0f);
+		outputs[ARC_OUTPUT].setVoltage((!currentArcStepSkipped && arcPhase < arcGateLength) ? GATE_HIGH_VOLTAGE : 0.0f);
 
 		const double mainPhaseDelta = static_cast<double>(effectiveBpm) * args.sampleTime / 60.0;
 		mainPhase += mainPhaseDelta;
@@ -360,6 +414,7 @@ struct Arc : Module {
 			arcPhase -= 1.0;
 			++arcStepIndex;
 			barStep = protoseq::arcBarStep(arcStepIndex, barLength);
+			evaluatedArcStepIndex = -1;
 		}
 	}
 };

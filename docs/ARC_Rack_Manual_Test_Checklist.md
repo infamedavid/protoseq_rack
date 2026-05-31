@@ -44,3 +44,12 @@ Use this checklist for ARC behavior that depends on VCV Rack runtime, UI widgets
 - [ ] SEED at 0 remains the mutable/irrepeating mode foundation for future random processes.
 - [ ] SEED above 0 selects fixed seed buckets 1..1000 for future random processes.
 - [ ] BAR remains measured in ARC events and wraps the internal bar step by the effective BAR length.
+
+## Phase 4: BRNL skip
+
+- [ ] MAIN OUT is unaffected by BRNL at all BRNL settings.
+- [ ] ARC OUT is skipped according to BRNL skip probability.
+- [ ] BRNL at 0.0 passes all ARC gates.
+- [ ] BRNL at 1.0 silences ARC OUT while MAIN OUT keeps running.
+- [ ] With SEED above 0, the same SEED, BAR, and BRNL settings repeat the same ARC OUT skip positions by BAR.
+- [ ] With SEED at 0 and BRNL between 0.0 and 1.0, ARC OUT skip positions are mutable/irrepeating.

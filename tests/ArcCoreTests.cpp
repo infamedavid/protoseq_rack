@@ -70,6 +70,20 @@ int main() {
 	assert(arcBarStep(9, 4) == 1);
 	assert(arcBarStep(-1, 4) == 3);
 
+	assert(!arcShouldSkipBernoulli(0.0f, 0.0));
+	assert(!arcShouldSkipBernoulli(0.0f, 0.999));
+	assert(arcShouldSkipBernoulli(1.0f, 0.0));
+	assert(arcShouldSkipBernoulli(1.0f, 0.999));
+	assert(arcShouldSkipBernoulli(0.5f, 0.25));
+	assert(!arcShouldSkipBernoulli(0.5f, 0.75));
+
+	const bool fixedSkipA = arcShouldSkipBernoulliDeterministic(321, 3, 8, 0.5f, ArcRandomChannelId::BRNL);
+	const bool fixedSkipB = arcShouldSkipBernoulliDeterministic(321, 3, 8, 0.5f, ArcRandomChannelId::BRNL);
+	assert(fixedSkipA == fixedSkipB);
+	assert(arcShouldSkipBernoulliDeterministic(321, 3, 8, 0.0f, ArcRandomChannelId::BRNL) == false);
+	assert(arcShouldSkipBernoulliDeterministic(321, 3, 8, 1.0f, ArcRandomChannelId::BRNL) == true);
+	assert(arcUnitRandomFromSeed(buildArcSeed(321, 3, 8, ArcRandomChannelId::BRNL)) != arcUnitRandomFromSeed(buildArcSeed(321, 3, 8, ArcRandomChannelId::RLEN)));
+
 	std::cout << "All ARC core tests passed\n";
 	return 0;
 }
