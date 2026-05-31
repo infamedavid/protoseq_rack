@@ -36,3 +36,11 @@ Use this checklist for ARC behavior that depends on VCV Rack runtime, UI widgets
 - [ ] GLEN CV IN, when patched, replaces the GLEN knob.
 - [ ] ARPC CV IN, when patched, replaces the ARPC knob and scans the snapped index range 0..20.
 - [ ] BAR and BAR CV IN advance as an ARC-event cycle foundation without audible random/seed behavior in this phase.
+
+## Phase 3: SEED and BAR deterministic random foundation
+
+- [ ] SEED knob and SEED CV IN produce no audible random behavior yet.
+- [ ] SEED CV IN, when patched, replaces the SEED knob for the global ARC seed bucket.
+- [ ] SEED at 0 remains the mutable/irrepeating mode foundation for future random processes.
+- [ ] SEED above 0 selects fixed seed buckets 1..1000 for future random processes.
+- [ ] BAR remains measured in ARC events and wraps the internal bar step by the effective BAR length.

@@ -1,8 +1,11 @@
 #pragma once
 
+#include "ProtoRandom.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 
 namespace protoseq {
 
@@ -41,6 +44,16 @@ constexpr int ARC_MULTIPLIER_INDEX_MAX = 20;
 constexpr int ARC_BAR_MIN_EVENTS = 1;
 constexpr int ARC_BAR_MAX_EVENTS = 64;
 
+constexpr int ARC_SEED_BUCKET_MIN = 0;
+constexpr int ARC_SEED_BUCKET_MAX = 1000;
+
+enum class ArcRandomChannelId : int {
+	BRNL = 1,
+	RLEN = 2,
+	RATCH = 3,
+	SWNG = 4,
+};
+
 inline float arcClamp01(float value) {
 	return std::min(std::max(value, 0.0f), 1.0f);
 }
@@ -68,6 +81,29 @@ inline int arcBarLengthFromParam(float value) {
 inline int arcBarLengthFromNormalized(float voltage) {
 	const float scaled = static_cast<float>(ARC_BAR_MIN_EVENTS) + arcClamp01(voltage) * static_cast<float>(ARC_BAR_MAX_EVENTS - ARC_BAR_MIN_EVENTS);
 	return arcBarLengthFromParam(scaled);
+}
+
+inline int arcSeedBucketFromNormalized(float value) {
+	const float clamped = arcClamp01(value);
+	if (clamped <= 0.0f) {
+		return ARC_SEED_BUCKET_MIN;
+	}
+	return std::min(std::max(static_cast<int>(std::round(clamped * ARC_SEED_BUCKET_MAX)), 1), ARC_SEED_BUCKET_MAX);
+}
+
+inline int arcBarStep(int arcStepIndex, int barLen) {
+	const int clampedBarLen = arcBarLengthFromParam(static_cast<float>(barLen));
+	const int wrapped = arcStepIndex % clampedBarLen;
+	return wrapped < 0 ? wrapped + clampedBarLen : wrapped;
+}
+
+inline std::uint64_t buildArcSeed(int seedBucket, int barStep, int barLen, ArcRandomChannelId channelId) {
+	std::uint64_t state = 0xcbf29ce484222325ULL;
+	state = mixSeed(state, static_cast<std::uint64_t>(std::min(std::max(seedBucket, ARC_SEED_BUCKET_MIN), ARC_SEED_BUCKET_MAX)));
+	state = mixSeed(state, static_cast<std::uint64_t>(arcBarStep(barStep, barLen)));
+	state = mixSeed(state, static_cast<std::uint64_t>(arcBarLengthFromParam(static_cast<float>(barLen))));
+	state = mixSeed(state, static_cast<std::uint64_t>(static_cast<int>(channelId)));
+	return state;
 }
 
 } // namespace protoseq

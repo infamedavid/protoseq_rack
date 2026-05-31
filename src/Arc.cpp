@@ -1,7 +1,9 @@
 #include "plugin.hpp"
 #include "ArcCore.hpp"
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstdint>
 #include <functional>
 
 namespace {
@@ -181,7 +183,10 @@ struct Arc : Module {
 	double mainPhase = 0.0;
 	double arcPhase = 0.0;
 	int displayBpm = 120;
-	int barEventIndex = 0;
+	int arcStepIndex = 0;
+	int barStep = 0;
+	int seedBucket = 0;
+	std::array<std::uint64_t, 4> arcChannelSeeds{};
 
 	Arc() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -197,7 +202,7 @@ struct Arc : Module {
 		configParam(NRTC_PARAM, 1.0f, 8.0f, 1.0f, "NRTC");
 		configParam(RRTC_PARAM, 0.0f, 1.0f, 0.0f, "RRTC", "%", 0.0f, 100.0f);
 		configParam(BRNL_PARAM, 0.0f, 1.0f, 0.0f, "BRNL", "%", 0.0f, 100.0f);
-		configParam(SEED_PARAM, 0.0f, 1000.0f, 0.0f, "SEED");
+		configParam(SEED_PARAM, 0.0f, 1.0f, 0.0f, "SEED", "", 0.0f, 1000.0f);
 		configButton(PLAY_PARAM, "PLAY");
 		configButton(STOP_PARAM, "STOP");
 
@@ -210,10 +215,6 @@ struct Arc : Module {
 		if (ParamQuantity* nrtcQuantity = getParamQuantity(NRTC_PARAM)) {
 			nrtcQuantity->snapEnabled = true;
 		}
-		if (ParamQuantity* seedQuantity = getParamQuantity(SEED_PARAM)) {
-			seedQuantity->snapEnabled = true;
-		}
-
 		configInput(MAIN_CV_INPUT, "MAIN CV IN");
 		configInput(BAR_CV_INPUT, "BAR CV IN");
 		configInput(PW_CV_INPUT, "PW CV IN");
@@ -268,10 +269,27 @@ struct Arc : Module {
 			: protoseq::arcBarLengthFromParam(params[BAR_PARAM].getValue());
 	}
 
+	int getEffectiveSeedBucket() const {
+		const float rawSeed = inputs[SEED_CV_INPUT].isConnected()
+			? inputs[SEED_CV_INPUT].getVoltage()
+			: params[SEED_PARAM].getValue();
+		return protoseq::arcSeedBucketFromNormalized(rawSeed);
+	}
+
+	void updateArcRandomFoundation(int effectiveBarLen) {
+		seedBucket = getEffectiveSeedBucket();
+		barStep = protoseq::arcBarStep(arcStepIndex, effectiveBarLen);
+		arcChannelSeeds[0] = protoseq::buildArcSeed(seedBucket, barStep, effectiveBarLen, protoseq::ArcRandomChannelId::BRNL);
+		arcChannelSeeds[1] = protoseq::buildArcSeed(seedBucket, barStep, effectiveBarLen, protoseq::ArcRandomChannelId::RLEN);
+		arcChannelSeeds[2] = protoseq::buildArcSeed(seedBucket, barStep, effectiveBarLen, protoseq::ArcRandomChannelId::RATCH);
+		arcChannelSeeds[3] = protoseq::buildArcSeed(seedBucket, barStep, effectiveBarLen, protoseq::ArcRandomChannelId::SWNG);
+	}
+
 	void resetPhases() {
 		mainPhase = 0.0;
 		arcPhase = 0.0;
-		barEventIndex = 0;
+		arcStepIndex = 0;
+		barStep = 0;
 	}
 
 	void startPlayback(bool resetPhase) {
@@ -322,6 +340,9 @@ struct Arc : Module {
 			return;
 		}
 
+		const int barLength = getEffectiveBarLength();
+		updateArcRandomFoundation(barLength);
+
 		const float pulseWidth = getEffectivePulseWidth();
 		const float arcGateLength = getEffectiveArcGateLength();
 		outputs[MAIN_OUTPUT].setVoltage(mainPhase < pulseWidth ? GATE_HIGH_VOLTAGE : 0.0f);
@@ -335,10 +356,10 @@ struct Arc : Module {
 
 		const protoseq::ArcMultiplier arcMultiplier = getEffectiveArcMultiplier();
 		arcPhase += mainPhaseDelta * static_cast<double>(arcMultiplier.numerator) / static_cast<double>(arcMultiplier.denominator);
-		const int barLength = getEffectiveBarLength();
 		while (arcPhase >= 1.0) {
 			arcPhase -= 1.0;
-			barEventIndex = (barEventIndex + 1) % barLength;
+			++arcStepIndex;
+			barStep = protoseq::arcBarStep(arcStepIndex, barLength);
 		}
 	}
 };

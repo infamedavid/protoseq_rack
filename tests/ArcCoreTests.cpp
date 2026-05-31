@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <cstdint>
 #include <iostream>
 
 using namespace protoseq;
@@ -49,6 +50,25 @@ int main() {
 	assert(arcBarLengthFromParam(100.0f) == 64);
 	assert(arcBarLengthFromNormalized(0.0f) == 1);
 	assert(arcBarLengthFromNormalized(1.0f) == 64);
+
+	assert(arcSeedBucketFromNormalized(-1.0f) == 0);
+	assert(arcSeedBucketFromNormalized(0.0f) == 0);
+	assert(arcSeedBucketFromNormalized(0.0001f) == 1);
+	assert(arcSeedBucketFromNormalized(0.5f) == 500);
+	assert(arcSeedBucketFromNormalized(1.0f) == 1000);
+	assert(arcSeedBucketFromNormalized(2.0f) == 1000);
+
+	const std::uint64_t brnlA = buildArcSeed(123, 2, 8, ArcRandomChannelId::BRNL);
+	const std::uint64_t brnlB = buildArcSeed(123, 2, 8, ArcRandomChannelId::BRNL);
+	const std::uint64_t rlen = buildArcSeed(123, 2, 8, ArcRandomChannelId::RLEN);
+	assert(brnlA == brnlB);
+	assert(brnlA != rlen);
+
+	assert(arcBarStep(0, 4) == 0);
+	assert(arcBarStep(3, 4) == 3);
+	assert(arcBarStep(4, 4) == 0);
+	assert(arcBarStep(9, 4) == 1);
+	assert(arcBarStep(-1, 4) == 3);
 
 	std::cout << "All ARC core tests passed\n";
 	return 0;
