@@ -163,7 +163,6 @@ struct Arc : Module {
 		BRNL_CV_INPUT,
 		SEED_CV_INPUT,
 		PLAY_STOP_TOGGLE_INPUT,
-		RESERVED_BOTTOM_ROW_INPUT,
 		PLAY_STOP_GATE_INPUT,
 		NUM_INPUTS
 	};
@@ -260,12 +259,12 @@ struct Arc : Module {
 		configInput(RRTC_CV_INPUT, "RRTC CV IN - replaces RRTC knob with normalized 0..1V");
 		configInput(BRNL_CV_INPUT, "BRNL CV IN - replaces BRNL knob with normalized 0..1V skip probability");
 		configInput(SEED_CV_INPUT, "SEED CV IN - replaces SEED knob; 0 mutable, >0 fixed buckets 1..1000");
-		configInput(PLAY_STOP_TOGGLE_INPUT, "PLAY/STOP TOGGLE IN - rising edge toggles playback; falling edge does nothing");
+		configInput(PLAY_STOP_TOGGLE_INPUT, "PLAY/STOP TOGGLE IN - rising edge plays when stopped or stops when playing; falling edge is ignored");
 		configInput(PLAY_STOP_GATE_INPUT, "GATE PLAY/STOP IN - rising edge resets and plays; falling edge stops");
 
 		configOutput(MAIN_OUTPUT, "MAIN OUT - Master clock/gate output");
 		configOutput(ARC_OUTPUT, "ARC OUT - Arpeggio clock output");
-		configOutput(BAR_OUTPUT, "BAR OUT - 10V trigger at each BAR boundary");
+		configOutput(BAR_OUTPUT, "BAR OUT - 10V trigger at each BAR boundary; respects Skip BAR pulse on PLAY");
 	}
 
 	float getEffectiveBpm() {

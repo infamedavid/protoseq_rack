@@ -139,3 +139,17 @@ Use this checklist for ARC behavior that depends on VCV Rack runtime, UI widgets
 - [ ] BAR OUT stays low while stopped.
 - [ ] MAIN OUT and ARC OUT still behave as before.
 - [ ] No RESET, PAUSE, or STOP CV input exists.
+
+## Phase 10C: final I/O cleanup after BAR OUT
+
+- [ ] ARC loads in Rack.
+- [ ] Bottom row behaves as PLAY/STOP TOGGLE IN, GATE PLAY/STOP IN, BAR OUT, MAIN OUT, ARC OUT.
+- [ ] No STOP CV input remains.
+- [ ] PLAY/STOP TOGGLE IN starts when stopped and stops when playing; falling edges are ignored.
+- [ ] GATE PLAY/STOP IN rising edge resets the internal cycle and starts playback.
+- [ ] GATE PLAY/STOP IN falling edge stops playback.
+- [ ] BAR OUT still pulses at BAR boundaries.
+- [ ] MAIN OUT and ARC OUT still work.
+- [ ] Skip BAR pulse on PLAY still defaults enabled and still suppresses the immediate BAR OUT pulse on start.
+- [ ] Existing ARC tests pass.
+- [ ] Existing Gina tests pass.
