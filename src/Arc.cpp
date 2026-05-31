@@ -196,6 +196,12 @@ struct Arc : Module {
 	int evaluatedSeedBucket = -1;
 	int evaluatedBarStep = -1;
 	int evaluatedBarLength = -1;
+	float currentArcGateLengthScale = 1.0f;
+	int evaluatedRlenArcStepIndex = -1;
+	int evaluatedRlenSeedBucket = -1;
+	int evaluatedRlenBarStep = -1;
+	int evaluatedRlenBarLength = -1;
+	float evaluatedRlenAmount = -1.0f;
 
 	Arc() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -292,6 +298,13 @@ struct Arc : Module {
 		return clamp01(rawBrnl);
 	}
 
+	float getEffectiveRandomLengthAmount() const {
+		const float rawRlen = inputs[RLEN_CV_INPUT].isConnected()
+			? inputs[RLEN_CV_INPUT].getVoltage()
+			: params[RLEN_PARAM].getValue();
+		return clamp01(rawRlen);
+	}
+
 	void updateArcRandomFoundation(int effectiveBarLen) {
 		seedBucket = getEffectiveSeedBucket();
 		barStep = protoseq::arcBarStep(arcStepIndex, effectiveBarLen);
@@ -313,6 +326,34 @@ struct Arc : Module {
 			return protoseq::arcShouldSkipBernoulli(skipProbability, distribution(arcMutableRandomEngine));
 		}
 		return protoseq::arcShouldSkipBernoulliDeterministic(seedBucket, barStep, effectiveBarLen, skipProbability, protoseq::ArcRandomChannelId::BRNL);
+	}
+
+	float chooseArcGateLengthScale(float randomLengthAmount, int effectiveBarLen) {
+		if (randomLengthAmount <= 0.0f) {
+			return 1.0f;
+		}
+		if (seedBucket == 0) {
+			std::uniform_real_distribution<double> distribution(0.0, 1.0);
+			return static_cast<float>(protoseq::arcRandomLengthScale(randomLengthAmount, distribution(arcMutableRandomEngine)));
+		}
+		const double randomUnit = protoseq::arcUnitRandomFromSeed(protoseq::buildArcSeed(seedBucket, barStep, effectiveBarLen, protoseq::ArcRandomChannelId::RLEN));
+		return static_cast<float>(protoseq::arcRandomLengthScale(randomLengthAmount, randomUnit));
+	}
+
+	void updateArcGateLengthScale(float randomLengthAmount, int effectiveBarLen) {
+		if (currentArcStepSkipped || randomLengthAmount <= 0.0f) {
+			currentArcGateLengthScale = 1.0f;
+			return;
+		}
+		if (evaluatedRlenArcStepIndex == arcStepIndex && evaluatedRlenSeedBucket == seedBucket && evaluatedRlenBarStep == barStep && evaluatedRlenBarLength == effectiveBarLen && evaluatedRlenAmount == randomLengthAmount) {
+			return;
+		}
+		currentArcGateLengthScale = chooseArcGateLengthScale(randomLengthAmount, effectiveBarLen);
+		evaluatedRlenArcStepIndex = arcStepIndex;
+		evaluatedRlenSeedBucket = seedBucket;
+		evaluatedRlenBarStep = barStep;
+		evaluatedRlenBarLength = effectiveBarLen;
+		evaluatedRlenAmount = randomLengthAmount;
 	}
 
 	void updateArcStepSkipDecision(float skipProbability, int effectiveBarLen) {
@@ -345,6 +386,12 @@ struct Arc : Module {
 		evaluatedSeedBucket = -1;
 		evaluatedBarStep = -1;
 		evaluatedBarLength = -1;
+		currentArcGateLengthScale = 1.0f;
+		evaluatedRlenArcStepIndex = -1;
+		evaluatedRlenSeedBucket = -1;
+		evaluatedRlenBarStep = -1;
+		evaluatedRlenBarLength = -1;
+		evaluatedRlenAmount = -1.0f;
 	}
 
 	void startPlayback(bool resetPhase) {
@@ -399,6 +446,8 @@ struct Arc : Module {
 		updateArcRandomFoundation(barLength);
 		const float brnlSkipProbability = getEffectiveBrnlSkipProbability();
 		updateArcStepSkipDecision(brnlSkipProbability, barLength);
+		const float randomLengthAmount = getEffectiveRandomLengthAmount();
+		updateArcGateLengthScale(randomLengthAmount, barLength);
 
 		const protoseq::ArcMultiplier arcMultiplier = getEffectiveArcMultiplier();
 		const double arcStepDuration = protoseq::arcStepDurationSeconds(effectiveBpm, arcMultiplier);
@@ -407,7 +456,8 @@ struct Arc : Module {
 
 		const float pulseWidth = getEffectivePulseWidth();
 		const float arcGateLength = getEffectiveArcGateLength();
-		const double effectiveArcGatePhase = protoseq::arcEffectiveGatePhase(arcGateLength, currentArcStepStart, nextArcStepStart, ARC_GATE_SAFETY_GAP_SECONDS);
+		const float shortenedArcGateLength = std::min(arcGateLength, arcGateLength * currentArcGateLengthScale);
+		const double effectiveArcGatePhase = protoseq::arcEffectiveGatePhase(shortenedArcGateLength, currentArcStepStart, nextArcStepStart, ARC_GATE_SAFETY_GAP_SECONDS);
 		outputs[MAIN_OUTPUT].setVoltage(mainPhase < pulseWidth ? GATE_HIGH_VOLTAGE : 0.0f);
 		outputs[ARC_OUTPUT].setVoltage((!currentArcStepSkipped && arcPhase < effectiveArcGatePhase) ? GATE_HIGH_VOLTAGE : 0.0f);
 
@@ -424,6 +474,7 @@ struct Arc : Module {
 			++arcStepIndex;
 			barStep = protoseq::arcBarStep(arcStepIndex, barLength);
 			evaluatedArcStepIndex = -1;
+			evaluatedRlenArcStepIndex = -1;
 		}
 	}
 };

@@ -93,6 +93,18 @@ int main() {
 	assert(approx(static_cast<float>(arcEffectiveGatePhase(1.0f, 10.0, 10.5, 0.01)), 0.98f));
 	assert(approx(static_cast<float>(arcEffectiveGatePhase(0.5f, 10.0, 10.5, 0.01)), 0.5f));
 
+	assert(approx(arcApplyRandomLengthShortening(0.75f, 0.0f, 0.9), 0.75f));
+	assert(approx(arcApplyRandomLengthShortening(0.75f, 1.0f, 0.25), 0.5625f));
+	assert(arcApplyRandomLengthShortening(0.75f, 1.0f, 0.25) <= 0.75f);
+	assert(arcApplyRandomLengthShortening(0.75f, 0.5f, 1.0) <= 0.75f);
+	const float rlenA = arcApplyRandomLengthShorteningDeterministic(123, 2, 8, 0.75f, 0.5f, ArcRandomChannelId::RLEN);
+	const float rlenB = arcApplyRandomLengthShorteningDeterministic(123, 2, 8, 0.75f, 0.5f, ArcRandomChannelId::RLEN);
+	const float rlenDifferentSeed = arcApplyRandomLengthShorteningDeterministic(124, 2, 8, 0.75f, 0.5f, ArcRandomChannelId::RLEN);
+	const float brnlChannelLength = arcApplyRandomLengthShorteningDeterministic(123, 2, 8, 0.75f, 0.5f, ArcRandomChannelId::BRNL);
+	assert(approx(rlenA, rlenB));
+	assert(!approx(rlenA, rlenDifferentSeed));
+	assert(!approx(rlenA, brnlChannelLength));
+
 	std::cout << "All ARC core tests passed\n";
 	return 0;
 }

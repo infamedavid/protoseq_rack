@@ -62,3 +62,13 @@ Use this checklist for ARC behavior that depends on VCV Rack runtime, UI widgets
 - [ ] Fractional ARPC values (`1.5`, `2.5`, `3.5`) still produce the expected event counts over 2 MAIN periods.
 - [ ] BRNL skip still suppresses ARC OUT cleanly.
 - [ ] STOP forces MAIN OUT and ARC OUT low.
+
+## Phase 6: RLEN random gate shortening
+
+- [ ] RLEN at 0.0 leaves ARC OUT gate length stable at the GLEN/scheduler result.
+- [ ] Raising RLEN only shortens ARC OUT gates and never lengthens them beyond GLEN.
+- [ ] RLEN never creates ARC OUT overlap or removes the scheduler safety gap.
+- [ ] BRNL-skipped steps remain silent and do not emit ARC OUT.
+- [ ] MAIN OUT is unaffected by RLEN at all settings.
+- [ ] With SEED above 0, the same SEED, BAR, GLEN, and RLEN settings repeat the same gate-length pattern by BAR.
+- [ ] With SEED at 0 and RLEN above 0, ARC OUT gate lengths are mutable/irrepeating.

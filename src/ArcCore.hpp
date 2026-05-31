@@ -149,4 +149,19 @@ inline bool arcShouldSkipBernoulliDeterministic(int seedBucket, int barStep, int
 	return arcShouldSkipBernoulli(skipProbability, arcUnitRandomFromSeed(buildArcSeed(seedBucket, barStep, barLen, channelId)));
 }
 
+inline double arcRandomLengthScale(float randomLengthAmount, double randomUnit) {
+	const double amount = static_cast<double>(arcClamp01(randomLengthAmount));
+	const double clampedRandom = std::min(std::max(randomUnit, 0.0), 1.0);
+	return std::min(std::max(1.0 - amount * clampedRandom, 0.0), 1.0);
+}
+
+inline float arcApplyRandomLengthShortening(float gateLength, float randomLengthAmount, double randomUnit) {
+	const float clampedGateLength = arcClamp01(gateLength);
+	return static_cast<float>(static_cast<double>(clampedGateLength) * arcRandomLengthScale(randomLengthAmount, randomUnit));
+}
+
+inline float arcApplyRandomLengthShorteningDeterministic(int seedBucket, int barStep, int barLen, float gateLength, float randomLengthAmount, ArcRandomChannelId channelId = ArcRandomChannelId::RLEN) {
+	return arcApplyRandomLengthShortening(gateLength, randomLengthAmount, arcUnitRandomFromSeed(buildArcSeed(seedBucket, barStep, barLen, channelId)));
+}
+
 } // namespace protoseq
