@@ -222,20 +222,20 @@ struct Arc : Module {
 	Arc() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 
-		configParam(MAIN_PARAM, 20.0f, 350.0f, 120.0f, "MAIN BPM", " BPM");
-		configParam(BAR_PARAM, static_cast<float>(protoseq::ARC_BAR_MIN_EVENTS), static_cast<float>(protoseq::ARC_BAR_MAX_EVENTS), 4.0f, "BAR");
-		configParam(PW_PARAM, 0.0f, 1.0f, 0.5f, "PW", "%", 0.0f, 100.0f);
-		configParam(ARPC_PARAM, static_cast<float>(protoseq::ARC_MULTIPLIER_INDEX_MIN), static_cast<float>(protoseq::ARC_MULTIPLIER_INDEX_MAX), 0.0f, "ARPC");
-		configParam(GLEN_PARAM, 0.0f, 1.0f, 0.5f, "GLEN", "%", 0.0f, 100.0f);
-		configParam(RLEN_PARAM, 0.0f, 1.0f, 0.0f, "RLEN", "%", 0.0f, 100.0f);
-		configParam(SWNG_PARAM, 0.0f, 1.0f, 0.0f, "SWNG", "%", 0.0f, 100.0f);
-		configParam(RSWN_PARAM, 0.0f, 1.0f, 0.0f, "RSWN", "%", 0.0f, 100.0f);
-		configParam(NRTC_PARAM, static_cast<float>(protoseq::ARC_RATCHET_COUNT_MIN), static_cast<float>(protoseq::ARC_RATCHET_COUNT_MAX), 1.0f, "NRTC");
-		configParam(RRTC_PARAM, 0.0f, 1.0f, 0.0f, "RRTC", "%", 0.0f, 100.0f);
-		configParam(BRNL_PARAM, 0.0f, 1.0f, 0.0f, "BRNL", "%", 0.0f, 100.0f);
-		configParam(SEED_PARAM, 0.0f, 1.0f, 0.0f, "SEED", "", 0.0f, 1000.0f);
-		configButton(PLAY_PARAM, "PLAY");
-		configButton(STOP_PARAM, "STOP");
+		configParam(MAIN_PARAM, 20.0f, 350.0f, 120.0f, "MAIN - Main clock BPM", " BPM");
+		configParam(BAR_PARAM, static_cast<float>(protoseq::ARC_BAR_MIN_EVENTS), static_cast<float>(protoseq::ARC_BAR_MAX_EVENTS), 4.0f, "BAR - Seeded pattern cycle length in ARC events");
+		configParam(PW_PARAM, 0.0f, 1.0f, 0.5f, "PW - MAIN OUT pulse width; always leaves a low gap", "%", 0.0f, 100.0f);
+		configParam(ARPC_PARAM, static_cast<float>(protoseq::ARC_MULTIPLIER_INDEX_MIN), static_cast<float>(protoseq::ARC_MULTIPLIER_INDEX_MAX), 0.0f, "ARPC - ARC clock multiplier index");
+		configParam(GLEN_PARAM, 0.0f, 1.0f, 0.5f, "GLEN - Base gate length for ARC OUT", "%", 0.0f, 100.0f);
+		configParam(RLEN_PARAM, 0.0f, 1.0f, 0.0f, "RLEN - Seeded random gate shortening amount; only shortens", "%", 0.0f, 100.0f);
+		configParam(SWNG_PARAM, 0.0f, 1.0f, 0.0f, "SWNG - Swing delay amount", "%", 0.0f, 100.0f);
+		configParam(RSWN_PARAM, 0.0f, 1.0f, 0.0f, "RSWN - Probability that an ARC step receives swing", "%", 0.0f, 100.0f);
+		configParam(NRTC_PARAM, static_cast<float>(protoseq::ARC_RATCHET_COUNT_MIN), static_cast<float>(protoseq::ARC_RATCHET_COUNT_MAX), 1.0f, "NRTC - Number of ratchet triggers");
+		configParam(RRTC_PARAM, 0.0f, 1.0f, 0.0f, "RRTC - Probability that an ARC step receives ratchet", "%", 0.0f, 100.0f);
+		configParam(BRNL_PARAM, 0.0f, 1.0f, 0.0f, "BRNL - Bernoulli skip probability for ARC OUT", "%", 0.0f, 100.0f);
+		configParam(SEED_PARAM, 0.0f, 1.0f, 0.0f, "SEED - Global rhythmic seed; 0 is mutable", "", 0.0f, 1000.0f);
+		configButton(PLAY_PARAM, "PLAY - Start clock");
+		configButton(STOP_PARAM, "STOP - Stop clock and reset internal cycle");
 
 		if (ParamQuantity* barQuantity = getParamQuantity(BAR_PARAM)) {
 			barQuantity->snapEnabled = true;
@@ -246,102 +246,102 @@ struct Arc : Module {
 		if (ParamQuantity* nrtcQuantity = getParamQuantity(NRTC_PARAM)) {
 			nrtcQuantity->snapEnabled = true;
 		}
-		configInput(MAIN_CV_INPUT, "MAIN CV IN");
-		configInput(BAR_CV_INPUT, "BAR CV IN");
-		configInput(PW_CV_INPUT, "PW CV IN");
-		configInput(ARPC_CV_INPUT, "ARPC CV IN");
-		configInput(GLEN_CV_INPUT, "GLEN CV IN");
-		configInput(RLEN_CV_INPUT, "RLEN CV IN");
-		configInput(SWNG_CV_INPUT, "SWNG CV IN");
-		configInput(RSWN_CV_INPUT, "RSWN CV IN");
-		configInput(NRTC_CV_INPUT, "NRTC CV IN");
-		configInput(RRTC_CV_INPUT, "RRTC CV IN");
-		configInput(BRNL_CV_INPUT, "BRNL CV IN");
-		configInput(SEED_CV_INPUT, "SEED CV IN");
-		configInput(PLAY_CV_INPUT, "PLAY CV IN");
-		configInput(STOP_CV_INPUT, "STOP CV IN");
-		configInput(PLAY_STOP_GATE_INPUT, "PLAY/STOP GATE IN");
+		configInput(MAIN_CV_INPUT, "MAIN CV IN - replaces MAIN knob; 0V=20 BPM, 1V=350 BPM");
+		configInput(BAR_CV_INPUT, "BAR CV IN - replaces BAR knob with normalized 0..1V snapped to BAR length");
+		configInput(PW_CV_INPUT, "PW CV IN - replaces PW knob with normalized 0..1V; low gap preserved");
+		configInput(ARPC_CV_INPUT, "ARPC CV IN - replaces ARPC knob with normalized 0..1V snapped to multiplier table");
+		configInput(GLEN_CV_INPUT, "GLEN CV IN - replaces GLEN knob with normalized 0..1V");
+		configInput(RLEN_CV_INPUT, "RLEN CV IN - replaces RLEN knob with normalized 0..1V");
+		configInput(SWNG_CV_INPUT, "SWNG CV IN - replaces SWNG knob with normalized 0..1V");
+		configInput(RSWN_CV_INPUT, "RSWN CV IN - replaces RSWN knob with normalized 0..1V");
+		configInput(NRTC_CV_INPUT, "NRTC CV IN - replaces NRTC knob with normalized 0..1V snapped to 1..8");
+		configInput(RRTC_CV_INPUT, "RRTC CV IN - replaces RRTC knob with normalized 0..1V");
+		configInput(BRNL_CV_INPUT, "BRNL CV IN - replaces BRNL knob with normalized 0..1V skip probability");
+		configInput(SEED_CV_INPUT, "SEED CV IN - replaces SEED knob; 0 mutable, >0 fixed buckets 1..1000");
+		configInput(PLAY_CV_INPUT, "PLAY CV IN - rising edge starts clock");
+		configInput(STOP_CV_INPUT, "STOP CV IN - rising edge stops clock and resets internal cycle");
+		configInput(PLAY_STOP_GATE_INPUT, "PLAY/STOP GATE IN - rising edge resets and plays; falling edge stops");
 
-		configOutput(MAIN_OUTPUT, "MAIN OUT");
-		configOutput(ARC_OUTPUT, "ARC OUT");
+		configOutput(MAIN_OUTPUT, "MAIN OUT - Master clock/gate output");
+		configOutput(ARC_OUTPUT, "ARC OUT - Arpeggio clock output");
 	}
 
-	float getEffectiveBpm() {
+	float getEffectiveBpm() const {
 		if (inputs[MAIN_CV_INPUT].isConnected()) {
 			return bpmFromNormalized(inputs[MAIN_CV_INPUT].getVoltage());
 		}
 		return std::min(std::max(params[MAIN_PARAM].getValue(), MIN_BPM), MAX_BPM);
 	}
 
-	float getEffectivePulseWidth() {
+	float getEffectivePulseWidth() const {
 		const float rawPulseWidth = inputs[PW_CV_INPUT].isConnected()
 			? inputs[PW_CV_INPUT].getVoltage()
 			: params[PW_PARAM].getValue();
 		return std::min(clamp01(rawPulseWidth), MAX_MAIN_PULSE_WIDTH);
 	}
 
-	protoseq::ArcMultiplier getEffectiveArcMultiplier() {
+	protoseq::ArcMultiplier getEffectiveArcMultiplier() const {
 		const int index = inputs[ARPC_CV_INPUT].isConnected()
 			? protoseq::arcMultiplierIndexFromNormalized(inputs[ARPC_CV_INPUT].getVoltage())
 			: protoseq::arcMultiplierIndexFromParam(params[ARPC_PARAM].getValue());
 		return protoseq::arcMultiplierForIndex(index);
 	}
 
-	float getEffectiveArcGateLength() {
+	float getEffectiveArcGateLength() const {
 		const float rawGateLength = inputs[GLEN_CV_INPUT].isConnected()
 			? inputs[GLEN_CV_INPUT].getVoltage()
 			: params[GLEN_PARAM].getValue();
 		return std::min(clamp01(rawGateLength), MAX_ARC_GATE_LENGTH);
 	}
 
-	int getEffectiveBarLength() {
+	int getEffectiveBarLength() const {
 		return inputs[BAR_CV_INPUT].isConnected()
 			? protoseq::arcBarLengthFromNormalized(inputs[BAR_CV_INPUT].getVoltage())
 			: protoseq::arcBarLengthFromParam(params[BAR_PARAM].getValue());
 	}
 
-	int getEffectiveSeedBucket() {
+	int getEffectiveSeedBucket() const {
 		const float rawSeed = inputs[SEED_CV_INPUT].isConnected()
 			? inputs[SEED_CV_INPUT].getVoltage()
 			: params[SEED_PARAM].getValue();
 		return protoseq::arcSeedBucketFromNormalized(rawSeed);
 	}
 
-	float getEffectiveBrnlSkipProbability() {
+	float getEffectiveBrnlSkipProbability() const {
 		const float rawBrnl = inputs[BRNL_CV_INPUT].isConnected()
 			? inputs[BRNL_CV_INPUT].getVoltage()
 			: params[BRNL_PARAM].getValue();
 		return clamp01(rawBrnl);
 	}
 
-	float getEffectiveRandomLengthAmount() {
+	float getEffectiveRandomLengthAmount() const {
 		const float rawRlen = inputs[RLEN_CV_INPUT].isConnected()
 			? inputs[RLEN_CV_INPUT].getVoltage()
 			: params[RLEN_PARAM].getValue();
 		return clamp01(rawRlen);
 	}
 
-	int getEffectiveRatchetSelectedCount() {
+	int getEffectiveRatchetSelectedCount() const {
 		return inputs[NRTC_CV_INPUT].isConnected()
 			? protoseq::arcRatchetCountFromNormalized(inputs[NRTC_CV_INPUT].getVoltage())
 			: protoseq::arcRatchetCountFromParam(params[NRTC_PARAM].getValue());
 	}
 
-	float getEffectiveRatchetProbability() {
+	float getEffectiveRatchetProbability() const {
 		const float rawRrtc = inputs[RRTC_CV_INPUT].isConnected()
 			? inputs[RRTC_CV_INPUT].getVoltage()
 			: params[RRTC_PARAM].getValue();
 		return clamp01(rawRrtc);
 	}
 
-	float getEffectiveSwingAmount() {
+	float getEffectiveSwingAmount() const {
 		const float rawSwing = inputs[SWNG_CV_INPUT].isConnected()
 			? inputs[SWNG_CV_INPUT].getVoltage()
 			: params[SWNG_PARAM].getValue();
 		return clamp01(rawSwing);
 	}
 
-	float getEffectiveSwingProbability() {
+	float getEffectiveSwingProbability() const {
 		const float rawSwingProbability = inputs[RSWN_CV_INPUT].isConnected()
 			? inputs[RSWN_CV_INPUT].getVoltage()
 			: params[RSWN_PARAM].getValue();

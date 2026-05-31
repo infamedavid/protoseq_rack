@@ -98,3 +98,18 @@ Use this checklist for ARC behavior that depends on VCV Rack runtime, UI widgets
 - [ ] RATCH plus SWNG keeps ratchet subpulses inside the final effective gate duration.
 - [ ] BRNL-skipped ARC steps remain silent and do not emit swung gates or ratchets.
 - [ ] MAIN OUT is unaffected by SWNG/RSWN at all settings.
+
+## Phase 9: final CV/tooltips/polish regression
+
+- [ ] Every knob CV input replaces its corresponding knob rather than summing with it.
+- [ ] MAIN CV IN clamps below 0V to 20 BPM and above 1V to 350 BPM.
+- [ ] ARPC CV IN scans only snapped valid multiplier-table entries from index 0 through 20.
+- [ ] BAR CV IN and NRTC CV IN snap to their documented integer ranges.
+- [ ] SEED CV IN keeps 0 as mutable mode and maps values above 0 to fixed seed buckets 1..1000.
+- [ ] Parameter, input, and output tooltips clearly describe each ARC control and jack.
+- [ ] Bottom jack row remains PLAY CV IN, STOP CV IN, PLAY/STOP GATE IN, MAIN OUT, ARC OUT.
+- [ ] No PAUSE, RESET, transport output, BRNL output, EOC output, external clock sync, or extra output appears in the UI or context menu.
+- [ ] Full patch behavior works with ARC MAIN OUT to Gina’s ARP GATE IN and ARC ARC OUT to Gina’s ARP CLOCK IN.
+- [ ] BRNL, RLEN, NRTC/RRTC, and SWNG/RSWN can be combined without stuck-high or overlapping ARC OUT gates.
+- [ ] Fixed SEED settings repeat the same rhythmic pattern by BAR, while SEED 0 remains mutable for active random processes.
+- [ ] STOP stress while ratchets or swung gates are pending forces MAIN OUT and ARC OUT low.
