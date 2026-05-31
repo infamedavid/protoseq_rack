@@ -163,13 +163,14 @@ struct Arc : Module {
 		BRNL_CV_INPUT,
 		SEED_CV_INPUT,
 		PLAY_STOP_TOGGLE_INPUT,
-		STOP_CV_INPUT,
+		RESERVED_BOTTOM_ROW_INPUT,
 		PLAY_STOP_GATE_INPUT,
 		NUM_INPUTS
 	};
 	enum OutputId {
 		MAIN_OUTPUT,
 		ARC_OUTPUT,
+		BAR_OUTPUT,
 		NUM_OUTPUTS
 	};
 	enum LightId {
@@ -180,7 +181,9 @@ struct Arc : Module {
 	dsp::SchmittTrigger stopButtonTrigger;
 	dsp::SchmittTrigger playStopToggleTrigger;
 	dsp::SchmittTrigger playStopGateTrigger;
+	dsp::PulseGenerator barPulseGenerator;
 	bool isPlaying = false;
+	bool skipBarPulseOnPlay = true;
 	bool lastPlayStopGateHigh = false;
 	double mainPhase = 0.0;
 	double arcPhase = 0.0;
@@ -258,11 +261,11 @@ struct Arc : Module {
 		configInput(BRNL_CV_INPUT, "BRNL CV IN - replaces BRNL knob with normalized 0..1V skip probability");
 		configInput(SEED_CV_INPUT, "SEED CV IN - replaces SEED knob; 0 mutable, >0 fixed buckets 1..1000");
 		configInput(PLAY_STOP_TOGGLE_INPUT, "PLAY/STOP TOGGLE IN - rising edge toggles playback; falling edge does nothing");
-		configInput(STOP_CV_INPUT, "STOP CV IN - reserved; inactive until Phase 10B");
-		configInput(PLAY_STOP_GATE_INPUT, "PLAY/STOP GATE IN - rising edge resets and plays; falling edge stops");
+		configInput(PLAY_STOP_GATE_INPUT, "GATE PLAY/STOP IN - rising edge resets and plays; falling edge stops");
 
 		configOutput(MAIN_OUTPUT, "MAIN OUT - Master clock/gate output");
 		configOutput(ARC_OUTPUT, "ARC OUT - Arpeggio clock output");
+		configOutput(BAR_OUTPUT, "BAR OUT - 10V trigger at each BAR boundary");
 	}
 
 	float getEffectiveBpm() {
@@ -547,14 +550,23 @@ struct Arc : Module {
 		evaluatedRatchetSelectedCount = -1;
 		evaluatedRatchetProbability = -1.0f;
 		invalidateArcSwingSchedule();
+		barPulseGenerator.process(1.0f);
+	}
+
+	void triggerBarPulse() {
+		barPulseGenerator.trigger(0.001f);
 	}
 
 	void startPlayback(bool resetPhase) {
+		const bool wasPlaying = isPlaying;
 		if (resetPhase) {
 			resetPhases();
 		}
-		if (!isPlaying) {
+		if (!wasPlaying || resetPhase) {
 			isPlaying = true;
+			if (!skipBarPulseOnPlay) {
+				triggerBarPulse();
+			}
 		}
 	}
 
@@ -565,8 +577,24 @@ struct Arc : Module {
 				resetPhases();
 			}
 		}
+		barPulseGenerator.process(1.0f);
 		outputs[MAIN_OUTPUT].setVoltage(0.0f);
 		outputs[ARC_OUTPUT].setVoltage(0.0f);
+		outputs[BAR_OUTPUT].setVoltage(0.0f);
+	}
+
+	json_t* dataToJson() override {
+		json_t* rootJ = json_object();
+		json_object_set_new(rootJ, "skipBarPulseOnPlay", json_boolean(skipBarPulseOnPlay));
+		return rootJ;
+	}
+
+	void dataFromJson(json_t* rootJ) override {
+		skipBarPulseOnPlay = true;
+		json_t* skipBarPulseOnPlayJ = json_object_get(rootJ, "skipBarPulseOnPlay");
+		if (skipBarPulseOnPlayJ) {
+			skipBarPulseOnPlay = json_boolean_value(skipBarPulseOnPlayJ) != 0;
+		}
 	}
 
 	void process(const ProcessArgs& args) override {
@@ -602,6 +630,7 @@ struct Arc : Module {
 		if (!isPlaying) {
 			outputs[MAIN_OUTPUT].setVoltage(0.0f);
 			outputs[ARC_OUTPUT].setVoltage(0.0f);
+			outputs[BAR_OUTPUT].setVoltage(0.0f);
 			return;
 		}
 
@@ -652,10 +681,14 @@ struct Arc : Module {
 			currentArcStepStartSeconds += arcStepDuration;
 			++arcStepIndex;
 			barStep = protoseq::arcBarStep(arcStepIndex, barLength);
+			if (barStep == 0) {
+				triggerBarPulse();
+			}
 			evaluatedArcStepIndex = -1;
 			evaluatedRlenArcStepIndex = -1;
 			evaluatedRatchetArcStepIndex = -1;
 		}
+		outputs[BAR_OUTPUT].setVoltage(barPulseGenerator.process(args.sampleTime) ? GATE_HIGH_VOLTAGE : 0.0f);
 	}
 };
 
@@ -707,11 +740,20 @@ struct ArcWidget : ModuleWidget {
 		addInput(createInputCentered<ArcJack>(arcMm(52.04f, 92.00f), module, Arc::SEED_CV_INPUT));
 
 		addInput(createInputCentered<ArcJack>(arcMm(8.88f, 112.82f), module, Arc::PLAY_STOP_TOGGLE_INPUT));
-		addInput(createInputCentered<ArcJack>(arcMm(19.67f, 112.82f), module, Arc::STOP_CV_INPUT));
-		addInput(createInputCentered<ArcJack>(arcMm(30.46f, 112.82f), module, Arc::PLAY_STOP_GATE_INPUT));
+		addInput(createInputCentered<ArcJack>(arcMm(19.67f, 112.82f), module, Arc::PLAY_STOP_GATE_INPUT));
 
+		addOutput(createOutputCentered<ArcJack>(arcMm(30.46f, 112.82f), module, Arc::BAR_OUTPUT));
 		addOutput(createOutputCentered<ArcJack>(arcMm(41.25f, 112.82f), module, Arc::MAIN_OUTPUT));
 		addOutput(createOutputCentered<ArcJack>(arcMm(52.04f, 112.82f), module, Arc::ARC_OUTPUT));
+	}
+
+	void appendContextMenu(Menu* menu) override {
+		if (!menu) return;
+		Arc* arcModule = dynamic_cast<Arc*>(module);
+		menu->addChild(new MenuSeparator());
+		menu->addChild(createCheckMenuItem("Skip BAR pulse on PLAY", "",
+			[arcModule]() { return arcModule && arcModule->skipBarPulseOnPlay; },
+			[arcModule]() { if (arcModule) arcModule->skipBarPulseOnPlay = !arcModule->skipBarPulseOnPlay; }));
 	}
 };
 

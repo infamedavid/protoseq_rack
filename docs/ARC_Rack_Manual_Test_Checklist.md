@@ -11,9 +11,9 @@ Use this checklist for ARC behavior that depends on VCV Rack runtime, UI widgets
 - [ ] Sending a rising edge to PLAY/STOP TOGGLE IN starts MAIN OUT when ARC is stopped.
 - [ ] Sending a second rising edge to PLAY/STOP TOGGLE IN stops MAIN OUT and ARC OUT.
 - [ ] Falling edges on PLAY/STOP TOGGLE IN do not change playback state.
-- [ ] STOP CV IN is physically present but reserved/inactive in Phase 10A.
-- [ ] PLAY/STOP GATE IN rising edge starts playback from the beginning of the MAIN cycle.
-- [ ] PLAY/STOP GATE IN falling edge stops playback and forces MAIN OUT and ARC OUT low.
+- [ ] No STOP CV IN is present in the visible bottom jack row.
+- [ ] GATE PLAY/STOP IN rising edge starts playback from the beginning of the MAIN cycle.
+- [ ] GATE PLAY/STOP IN falling edge stops playback and forces MAIN OUT, ARC OUT, and BAR OUT low.
 - [ ] MAIN CV IN, when patched, replaces the MAIN knob for BPM control.
 - [ ] MAIN CV IN at 0.0V displays `020` and runs MAIN OUT at 20 BPM.
 - [ ] MAIN CV IN at 1.0V displays `350` and runs MAIN OUT at 350 BPM.
@@ -32,7 +32,7 @@ Use this checklist for ARC behavior that depends on VCV Rack runtime, UI widgets
 - [ ] ARPC index 5 (`3.5`) produces 7 ARC pulses over 2 MAIN periods.
 - [ ] ARPC index 20 (`32`) is reachable and produces 32 ARC pulses per MAIN period.
 - [ ] ARC phase does not reset on every MAIN pulse.
-- [ ] PLAY/STOP GATE IN rising resets ARC phase and starts from the beginning of the ARC cycle.
+- [ ] GATE PLAY/STOP IN rising resets ARC phase and starts from the beginning of the ARC cycle.
 - [ ] STOP forces ARC OUT low.
 - [ ] GLEN controls ARC OUT high duration without producing overlapping or stuck-high ARC gates.
 - [ ] GLEN CV IN, when patched, replaces the GLEN knob.
@@ -109,12 +109,12 @@ Use this checklist for ARC behavior that depends on VCV Rack runtime, UI widgets
 - [ ] BAR CV IN and NRTC CV IN snap to their documented integer ranges.
 - [ ] SEED CV IN keeps 0 as mutable mode and maps values above 0 to fixed seed buckets 1..1000.
 - [ ] Parameter, input, and output tooltips clearly describe each ARC control and jack.
-- [ ] Bottom jack row remains PLAY/STOP TOGGLE IN, reserved STOP CV IN, PLAY/STOP GATE IN, MAIN OUT, ARC OUT.
-- [ ] No PAUSE, RESET, transport output, BRNL output, EOC output, external clock sync, or extra output appears in the UI or context menu.
+- [ ] Bottom jack row remains PLAY/STOP TOGGLE IN, GATE PLAY/STOP IN, BAR OUT, MAIN OUT, ARC OUT.
+- [ ] No PAUSE, RESET, PLAY/STOP transport output, BRNL output, EOC output, external clock sync, or extra output appears in the UI or context menu.
 - [ ] Full patch behavior works with ARC MAIN OUT to Gina’s ARP GATE IN and ARC ARC OUT to Gina’s ARP CLOCK IN.
 - [ ] BRNL, RLEN, NRTC/RRTC, and SWNG/RSWN can be combined without stuck-high or overlapping ARC OUT gates.
 - [ ] Fixed SEED settings repeat the same rhythmic pattern by BAR, while SEED 0 remains mutable for active random processes.
-- [ ] STOP stress while ratchets or swung gates are pending forces MAIN OUT and ARC OUT low.
+- [ ] STOP stress while ratchets, swung gates, or BAR OUT pulses are pending forces MAIN OUT, ARC OUT, and BAR OUT low.
 
 
 ## Phase 10A: PLAY/STOP toggle input
@@ -122,8 +122,20 @@ Use this checklist for ARC behavior that depends on VCV Rack runtime, UI widgets
 - [ ] With ARC stopped, a rising edge at PLAY/STOP TOGGLE IN starts playback.
 - [ ] With ARC playing, a rising edge at PLAY/STOP TOGGLE IN stops playback and forces MAIN OUT and ARC OUT low.
 - [ ] Falling edges at PLAY/STOP TOGGLE IN do nothing.
-- [ ] STOP CV IN remains physically present but does not control transport in this phase.
-- [ ] PLAY/STOP GATE IN remains unchanged: rising edge resets the internal cycle and plays; falling edge stops.
 - [ ] PLAY button still starts playback.
 - [ ] STOP button still stops playback and resets the internal cycle.
-- [ ] No BAR OUT exists yet.
+
+## Phase 10B: BAR OUT and final bottom row
+
+- [ ] Bottom row visually reads and behaves as PLAY/STOP TOGGLE IN, GATE PLAY/STOP IN, BAR OUT, MAIN OUT, ARC OUT.
+- [ ] STOP CV IN is gone from the visible widget layout.
+- [ ] PLAY/STOP TOGGLE IN starts playback when stopped.
+- [ ] PLAY/STOP TOGGLE IN stops playback when playing.
+- [ ] GATE PLAY/STOP IN rising edge resets the internal cycle and starts playback.
+- [ ] GATE PLAY/STOP IN falling edge stops playback.
+- [ ] BAR OUT emits a short 10V trigger at every BAR boundary.
+- [ ] With Skip BAR pulse on PLAY enabled, pressing PLAY does not immediately emit BAR OUT.
+- [ ] With Skip BAR pulse on PLAY disabled, pressing PLAY immediately emits BAR OUT.
+- [ ] BAR OUT stays low while stopped.
+- [ ] MAIN OUT and ARC OUT still behave as before.
+- [ ] No RESET, PAUSE, or STOP CV input exists.
