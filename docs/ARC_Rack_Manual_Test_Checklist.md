@@ -164,3 +164,12 @@ Use this checklist for ARC behavior that depends on VCV Rack runtime, UI widgets
 - [ ] GATE PLAY/STOP IN rising edge still resets and starts playback.
 - [ ] GATE PLAY/STOP IN falling edge still stops playback.
 - [ ] Skip BAR pulse on PLAY still defaults enabled and behaves as before.
+
+
+## Phase 11A: ARPC default multiplier
+
+- [ ] Adding a fresh ARC module defaults ARPC to multiplier `4` (table index 6).
+- [ ] ARPC can still reach multiplier `1` at table index 0.
+- [ ] ARPC can still reach multiplier `32` at table index 20.
+- [ ] ARPC CV IN still replaces the knob and scans the full snapped table index range 0..20.
+- [ ] MAIN OUT, ARC OUT, and BAR OUT still work.

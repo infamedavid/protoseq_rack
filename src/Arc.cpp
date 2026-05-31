@@ -226,7 +226,7 @@ struct Arc : Module {
 		configParam(MAIN_PARAM, 20.0f, 350.0f, 120.0f, "MAIN - Main clock BPM", " BPM");
 		configParam(BAR_PARAM, static_cast<float>(protoseq::ARC_BAR_MIN_EVENTS), static_cast<float>(protoseq::ARC_BAR_MAX_EVENTS), 4.0f, "BAR - Seeded pattern cycle length in ARC events");
 		configParam(PW_PARAM, 0.0f, 1.0f, 0.5f, "PW - MAIN OUT pulse width; always leaves a low gap", "%", 0.0f, 100.0f);
-		configParam(ARPC_PARAM, static_cast<float>(protoseq::ARC_MULTIPLIER_INDEX_MIN), static_cast<float>(protoseq::ARC_MULTIPLIER_INDEX_MAX), 0.0f, "ARPC - ARC clock multiplier index");
+		configParam(ARPC_PARAM, static_cast<float>(protoseq::ARC_MULTIPLIER_INDEX_MIN), static_cast<float>(protoseq::ARC_MULTIPLIER_INDEX_MAX), static_cast<float>(protoseq::ARC_MULTIPLIER_DEFAULT_INDEX), "ARPC - ARC clock multiplier index");
 		configParam(GLEN_PARAM, 0.0f, 1.0f, 0.5f, "GLEN - Base gate length for ARC OUT", "%", 0.0f, 100.0f);
 		configParam(RLEN_PARAM, 0.0f, 1.0f, 0.0f, "RLEN - Seeded random gate shortening amount; only shortens", "%", 0.0f, 100.0f);
 		configParam(SWNG_PARAM, 0.0f, 1.0f, 0.0f, "SWNG - Swing delay amount", "%", 0.0f, 100.0f);

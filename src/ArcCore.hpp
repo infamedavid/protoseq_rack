@@ -49,6 +49,7 @@ constexpr std::array<ArcMultiplier, 21> ARC_MULTIPLIERS{{
 
 constexpr int ARC_MULTIPLIER_INDEX_MIN = 0;
 constexpr int ARC_MULTIPLIER_INDEX_MAX = 20;
+constexpr int ARC_MULTIPLIER_DEFAULT_INDEX = 6;
 constexpr int ARC_BAR_MIN_EVENTS = 1;
 constexpr int ARC_BAR_MAX_EVENTS = 64;
 constexpr int ARC_RATCHET_COUNT_MIN = 1;

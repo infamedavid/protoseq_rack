@@ -31,6 +31,7 @@ int main() {
 	assertMultiplier(1, 1.5f, 3, 2);
 	assertMultiplier(3, 2.5f, 5, 2);
 	assertMultiplier(5, 3.5f, 7, 2);
+	assertMultiplier(ARC_MULTIPLIER_DEFAULT_INDEX, 4.0f, 4, 1);
 	assertMultiplier(20, 32.0f, 32, 1);
 
 	assert(arcMultiplierIndexFromParam(-10.0f) == 0);
